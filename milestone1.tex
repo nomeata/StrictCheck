@@ -214,4 +214,95 @@ Moving forward, we want to allow users to check demand specifications
 of multi-argument functions, higher-order functions, and functions on
 data structures which themselves contain functions.
 
+\section{Progress as of Second Milestone}
+
+As of now, we have successfully implemented a proof-of-concept for the
+instrumentation of functions over lists. By making use of a mutable
+pointer-based data structure, we managed to implement this instrumentation such
+that the execution of the instrumented function is a constant multiplicative
+factor slower than the execution of the uninstrumented function. We have also
+(mostly) implemented the module which will enable us to handle instrumenting
+functions of an arbitrary number of arguments. Tomorrow, we plan to meet with
+Jos\'e Manuel Calder\'on Trilla tomorrow, who's done quite a bit on strictness
+analysis. We are also anticipating collaborations with Leo Lampropoulos (expert
+in property based random testing) and Antal Spector-Zabusky (well versed in
+generic programming in Haskell).
+
+Here are some examples of functions that operate on the \verb|List| data type.
+Each of these functions demonstrate different strictness on the input list. For example, the lazy \verb|Context| doesn't inspect the input list at all, and thus is completely lazy. By contrast, \verb|spineStrict| evaluates the structure of the list without forcing its contents to be evaluated. A more complex example of a demand context is \verb|evenStrict| which, like |spineStrict|, evaluates the entire structure of the list, but which also evaluates every other element contained in the list.
+
+\begin{minted}{haskell}
+type Context a = a -> ()
+
+lazy :: Context [a]
+lazy = const ()
+
+whnf :: Context [a]
+whnf = flip seq ()
+
+nthStrict :: Int -> Context [a]
+nthStrict n = flip seq () . (!! n)
+
+spineStrict :: Context [a]
+spineStrict = flip seq () . foldl' (flip (:)) []
+
+allStrict :: NFData a => Context [a]
+allStrict = rnf
+
+oddStrict :: NFData a => Context [a]
+oddStrict []           = ()
+oddStrict [x]          = rnf x
+oddStrict (x : _ : xs) = rnf x `seq` oddStrict xs
+
+evenStrict :: NFData a => Context [a]
+evenStrict []           = ()
+evenStrict [_]          = ()
+evenStrict (_ : x : xs) = rnf x `seq` evenStrict xs
+\end{minted}
+
+To observe the behavior of these functions, we used the \verb|demandList|
+function on each of the contexts defined above. We evaluate the same function
+(\verb|take 6|) on the same data (\verb|[1..5]|), but with differing demands on
+the result.
+
+\begin{minted}{haskell}
+mapM_ printDemand_primList $
+   map (\context -> demandList context (take 6) [1..5]) $
+      [lazy,
+       whnf,
+       spineStrict,
+       nthStrict 2,
+       allStrict,
+       oddStrict,
+       evenStrictt]
+\end{minted}
+
+We then print a representation of the demand on the \emph{input} which is
+incurred by this evaluation. An ``O'' indicates that the data at
+that list cell was forced in the corresponding context, and an underscore
+indicates means that the data at its list cell was not evaluated. An ellipsis
+indicates that the rest of the list was not evaluated, while a closing square
+bracket indicates that the list was evaluated all the way down to its end.
+
+\begin{verbatim}
+lazy:                  ...
+whnf:                  [_, ...
+spineStrict:           [_, _, _, _, _, _]
+flip seq () . (!! 2):  [_, _, O, ...
+allStrict:             [O, O, O, O, O, O]
+oddStrict:             [O, _, O, _, O, _]
+evenStrict:            [_, O, _, O, _, O]
+\end{verbatim}
+
+The process of \emph{currying} takes a function of one argument which returns another function of one argument and converts it into a function taking two arguments and returning a result. Conversely, \emph{uncurrying} takes such a function of two arguments and converts it into a function of one argument which returns another function of one argument.
+
+With clever type-level programming, we can generalize currying to functions with arbitrary numbers of arguments. This is necessary to enable our library to handle testing such ``curried'' functions, which are ubiquitous in Haskell. As such, we have implemented the following (non-trivial) functions, which will be a necessary part of our internal infrastructure.
+
+\begin{minted}{haskell}
+curryAll   :: function -> (Tuple (Args function) -> Result function)
+uncurryAll :: (Tuple (Args function) -> Result function) -> function
+\end{minted}
+
+
+
 \end{document}
