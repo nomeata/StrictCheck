@@ -43,3 +43,44 @@ I'm now separating out the demand types for different primitives, because I thin
 A question: should the field in `E` be strict? Should the fields in all demand types be strict? Does it matter, semantically?
 
 (My intuition says yes / yes / no)
+
+
+```
+data Thunk a = T | E !a
+
+type family Args (function :: *) :: [*] where
+  Args (a -> b) = a ': Args b
+  Args r        = '[]
+
+type family WithSpecs (args :: [*]) :: [*] where
+  WithSpecs (arg ': args) = (arg, Spec arg) ': WithSpecs args
+  WithSpecs '[]           = '[]
+
+type family Result (function :: *) :: * where
+  Result (a -> b) = Result b
+  Result r        = r
+
+type family Demands (xs :: [*]) :: [*] where
+  Demands (x ': xs) = Demand x ': Demands xs
+  Demands '[]       = '[]
+
+type family Thunks (xs :: [*]) :: [*] where
+  Thunks (x ': xs) = Thunk x ': Thunks xs
+  Thunks '[]       = '[]
+
+type family Demand (x :: *) :: * where
+  Demand (a -> b)  = FuncDemand
+  Demand (a :+: b) = Demand a :+: Demand b
+  Demand (a :*: b) = Thunk (Demand a) :*: Thunk (Demand b)
+  ...
+
+type family Spec (x :: *) :: * where
+  Spec (a :*: b) = Spec a :*: Spec b
+  Spec (a :+: b) = Spec a :+: Spec b
+  Spec (a -> b) = Tuple (WithSpecs (Args (a -> b)))
+                  -> Demand (Result (a -> b))
+                  -> Tuple (Thunks (Demands (Args (a -> b))))
+  ...
+```
+
+We do not need to use `atomicModifyIORef`, because even Par-style parallelism can't mess with things. In order for something to have a data race, it needs to read and write to the same location, but our algorithm for instrumentation does not ever read from the IORefs it writes to (that is, until the instrumented computation is completely finished). Therefore, we can safely drop the expense of atomicity.
