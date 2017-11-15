@@ -285,13 +285,13 @@ indicates that the rest of the list was not evaluated, while a closing square
 bracket indicates that the list was evaluated all the way down to its end.
 
 \begin{verbatim}
-lazy:                  ...
-whnf:                  [_, ...
-spineStrict:           [_, _, _, _, _, _]
-flip seq () . (!! 2):  [_, _, O, ...
-allStrict:             [O, O, O, O, O, O]
-oddStrict:             [O, _, O, _, O, _]
-evenStrict:            [_, O, _, O, _, O]
+lazy:         ...
+whnf:         [_, ...
+spineStrict:  [_, _, _, _, _, _]
+nthStrict 2:  [_, _, O, ...
+allStrict:    [O, O, O, O, O, O]
+oddStrict:    [O, _, O, _, O, _]
+evenStrict:   [_, O, _, O, _, O]
 \end{verbatim}
 
 The process of \emph{currying} takes a function of one argument which returns another function of one argument and converts it into a function taking two arguments and returning a result. Conversely, \emph{uncurrying} takes such a function of two arguments and converts it into a function of one argument which returns another function of one argument.
