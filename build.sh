@@ -1,2 +1,2 @@
 #!/bin/bash
-pdflatex -shell-escape milestone1.tex
+pdflatex -shell-escape report.tex
