@@ -76,3 +76,5 @@ type family Spec (x :: *) :: * where
 ```
 
 We do not need to use `atomicModifyIORef`, because even Par-style parallelism can't mess with things. In order for something to have a data race, it needs to read and write to the same location, but our algorithm for instrumentation does not ever read from the IORefs it writes to (that is, until the instrumented computation is completely finished). Therefore, we can safely drop the expense of atomicity.
+
+We should catch all pattern-match failure exceptions and nicely report them to the user as a specification failure. Better yet, we should find a way to modify the user-written spec to insert information-carrying exceptions at every potential point of partiality so that we can pinpoint for them where they didn't cover a case in their specification. This might be overkill, because shrinking might give them a pretty good idea of how they screwed up.
