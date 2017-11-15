@@ -12,18 +12,12 @@ Another thought: for our final thing, we're going to want a function that gives 
 
 This justifies even more so  why we split the context and function apart!
 
-I know what the demand type for higher order functions has to be, and I know how to implement / instrument it!
-
-Note mostly to self: Args really ought to take a nat parameter, cause there *are* use cases for testing under-saturated functions
-
 User facing type should use something like this version of `Maybe`:
 
 ```
 data Thunk a = E a  -- evaluated
              | T    -- thunk
 ```
-
-This'll make writing demand functions less verbose by reducing the line noise of `Just`/`Nothing`
 
 And if they really want to make use of some function on `Maybe`s, we can give them:
 
@@ -37,8 +31,6 @@ asMaybe :: (Maybe a -> Maybe b)
 If a field is strict, our generic demand type should omit the `Thunk` wrapper. We can detect strictness/unpackedness at the type level via Generics. :)
 
 So the demand type for `data Foo = Foo !Int Bool` would be iso. to `data FooD = FooD IntD (Thunk BoolD)`
-
-I'm now separating out the demand types for different primitives, because I think it's actually wrong to have them be iso. to unit. I think, if forced, they should contain the value they actually evaluated to!
 
 A question: should the field in `E` be strict? Should the fields in all demand types be strict? Does it matter, semantically?
 
