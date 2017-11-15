@@ -294,9 +294,17 @@ oddStrict:    [O, _, O, _, O, _]
 evenStrict:   [_, O, _, O, _, O]
 \end{verbatim}
 
-The process of \emph{currying} takes a function of one argument which returns another function of one argument and converts it into a function taking two arguments and returning a result. Conversely, \emph{uncurrying} takes such a function of two arguments and converts it into a function of one argument which returns another function of one argument.
+The process of \emph{currying} takes a function of one argument which returns
+another function of one argument and converts it into a function taking two
+arguments and returning a result. Conversely, \emph{uncurrying} takes such a
+function of two arguments and converts it into a function of one argument which
+returns another function of one argument.
 
-With clever type-level programming, we can generalize currying to functions with arbitrary numbers of arguments. This is necessary to enable our library to handle testing such ``curried'' functions, which are ubiquitous in Haskell. As such, we have implemented the following (non-trivial) functions, which will be a necessary part of our internal infrastructure.
+With clever type-level programming, we can generalize currying to functions with
+arbitrary numbers of arguments. This is necessary to enable our library to
+handle testing such ``curried'' functions, which are ubiquitous in Haskell. As
+such, we have implemented the following (non-trivial) functions, which will be a
+necessary part of our internal infrastructure.
 
 \begin{minted}{haskell}
 curryAll   :: function -> (Tuple (Args function) -> Result function)
