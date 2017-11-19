@@ -23,37 +23,61 @@
 \frame{\titlepage}
 
 \begin{frame}
-\frametitle{Being lazy is fun and useful, but\dots}
-\Large\dots sometimes it leads to unintended consequences.
+\frametitle{Being lazy is sometimes vital, but\dots}
+\Large\dots it can lead to unintended consequences.
 \end{frame}
 
-\iffalse
-\begin{frame}[fragile]
-\frametitle{Amortized queues have strange laziness}
-\begin{minted}{haskell}
-enQ a (front,     back) =
-      (front, a : back)
+\note[itemize]{
+\item Ubiquitous in Haskell programming, used in OCaml programming
+\item (FRP) In the broader world, it is intrinsic in web-based functional
+      reactive programming
+\item (Spark) and in the field of big-data processing, for example, Spark
+}
 
-deQ ([],         [])   = Nothing
-deQ (a : front', back) = Just (a, (front', back))
-deQ ([],         back) = Just (a, (front', []))
-  where
-    (a : front') = reverse back
+\begin{frame}[fragile]
+\frametitle{Lazy lists}
+\begin{minted}{ocaml}
+type 'a lazyList =
+  | Cons of ('a Lazy.t *
+             'a lazyList Lazy.t)
+  | Nil
 \end{minted}
 \end{frame}
 
 \note[itemize]{
-  \item The usual implementation of functional queues uses two lists: when an
-        item is enqueued, it is cons'ed onto the back list, and when we dequeue,
-        an item is taken from the head of the front list. When the front list
-        becomes empty, the back queue is reversed and takes the role of the new
-        front list.
+\item In this talk, we'll analyze functions that operate over lazy data structures
+\item for instance, a lazy list like this
+\item A lazy list is just a list with all of its parameters wrapped in a lazy
+      computation
+}
+
+\begin{frame}[fragile]
+\frametitle{Lazy queues}
+\begin{minted}{ocaml}
+let enQ a (front,                     back) =
+          (front, lazy (Cons (lazy a, back)))
+
+let deQ (front, back) =
+  match Lazy.force front with
+    | Cons (a, front') -> (a, (front', back))
+    | Nil ->
+        let Cons (a, front') = reverseLazyList back
+        in (a, (front', lazy Nil))
+\end{minted}
+\end{frame}
+
+\note[itemize]{
+  \item As a micro example to motivate why thinking about laziness can be
+        non-trivial, let's look at this queue
+  \item In this slide, we use call-by-name ML for simplicity of presentation,
+        but it can be implemented in OCaml using the Lazy module
   \item This has amortized O(1) performance cost.
   \item This queue is lazy as long as you don't empty the front, then it is
         fully lazy in the structure of the back list. It only forces the spine
         of the back list when the front list is emptied.
 }
 
+\iffalse
 \begin{frame}
 \frametitle{But it doesn't have to be this way!}
 \large
@@ -62,7 +86,6 @@ Chris Okasaki:\\
 \vspace{.5\baselineskip}\\
 (\emph{Journal of Functional Programming}, October 1995)
 \end{frame}
-\fi
 
 \note[itemize]{
 \item Kenny:
@@ -72,6 +95,7 @@ Chris Okasaki:\\
 \item Correctness != functional correctness or micro-benchmark performance:
 \item == the right amount of lazy
 }
+\fi
 
 \begin{frame}
 \frametitle{Wouldn't it be nice to QuickCheck laziness?}
@@ -79,7 +103,7 @@ Traditional property-based testing (such as QuickCheck):
 \begin{itemize}
 \item[\greentick] Great for testing functional correctness
 \item[\greentick] Write a specification, fuzz inputs to functions to automatically test against that specification
-\item[\redcross] Can't observe (or even specify) properties beyond functional correctness
+\item[\redcross] Can only specify and check functional correctness properties
 \end{itemize}
 If we were able to \textbf{specify} and \textbf{observe} laziness, we could
 treat it \emph{just like} functional correctness.
@@ -88,6 +112,10 @@ treat it \emph{just like} functional correctness.
 \note[itemize]{
 \item QuickCheck gives functional correctness
 \item But laziness can't be observed by QuickCheck
+\item At the 3rd bullet point, say that laziness is not generally considered
+      part of functional correctness much like how asymptotic runtime
+      is not part of functional correctness because they are not directly
+      observable
 \item What if we make it observable? Then it's just part of functional correctness!
 }
 
@@ -98,93 +126,55 @@ treat it \emph{just like} functional correctness.
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Observing strictness (part I)}
-\begin{minted}{haskell}
-instrumentListWithRef :: IORef Int -> [a] -> [a]
-instrumentListWithRef _     []       = []
-instrumentListWithRef count (a : as) =
-  unsafePerformIO $ do
-    modifyIORef' count (\x -> x + 1)
-    return (a : instrumentListWithRef count as)
+\frametitle{Observing strictness}
+TODO: Just picture?
+\begin{minted}{ocaml}
+instrumentListWithRef : int ref
+                      -> 'a lazyList
+                      -> 'a lazyList
 \end{minted}
 \end{frame}
 
 \note[itemize]{
 \item Hengchu:
-\item \texttt{instrumentListWithRef} injected a snippet of code at every cons cell
-\item and it returns a new ``loaded'' list
-\item the injected code is executed as the ``loaded'' list gets pattern-matched on
+\item \texttt{instrumentListWithRef} clones the structure of the original list,
+      and attaches a lazy effectful computation to each constructor in the list.
+      So as the list is evaluated, each step of evaluation triggers one update
 }
 
 \begin{frame}[fragile]
 \frametitle{Strictness doesn't exist in a vacuum}
-
-\begin{itemize}
-\setlength\itemsep{-0.5em}
-\item<1->[]
-\begin{minted}{haskell}
-type Context a = a -> ()
-\end{minted}
-\item<2->[]
-\begin{minted}{haskell}
------------------------------------------------
-lazy, whnf, spineStrict :: Context [a]
-lazy        = \xs -> const () xs
-\end{minted}
-\item<3->[]
-\begin{minted}{haskell}
-whnf        = \xs -> case xs of
-                       []    -> ()
-                       (_:_) -> ()
-\end{minted}
-\item<4->[]
-\begin{minted}{haskell}
-spineStrict =
-  \xs -> whnf (foldl' (\ys y -> y : ys)) [] xs)
-\end{minted}
-\end{itemize}
+TODO: Pictures with color to show how much is demanded
 \end{frame}
 
 \note[itemize]{
-  \item The context type gives a function that returns a trivial value of the
-        unit type
-  \item It might look like there's only one such function \texttt{const ()}
-  \item There can actually be all kinds of varying strictness behavior
+  \item These pictures are illustrations of a demand context on a lazy list
+  \item These functions have the type from list to unit
+  \item It might look like there's only one such function (namely the lazy
+        implementation)
+  \item There can actually be many different demand behaviors
   \item Forcing the unit value triggers the strictness behavior on the input \texttt{a}
   \item This gives us an easy way to observe the strictness behavior of a context
 }
 
 \begin{frame}[fragile]
 \frametitle{Demanding an answer, lazily}
-\begin{itemize}
-\item<1->[]
-\begin{minted}{haskell}
-evaluate :: () -> IO ()
-evaluate () = return ()
+\begin{minted}{ocaml}
+demandCount context f xs =
+    let count          = ref 0
+        observableList =
+          instrumentListWithRef count xs
+    in context (f observableList); !count
 \end{minted}
-\item<2->[]
-\begin{minted}{haskell}
-demandCount :: Context b -> ([a] -> b) -> [a] -> Int
-demandCount c f as =
-  unsafePerformIO $ do
-    count <- newIORef 0
-    let observableList =
-          instrumentListWithRef count as
-    evaluate ((c . f) observableList)
-    readIORef count
-\end{minted}
-\end{itemize}
 \end{frame}
 
 \note[itemize]{
-  \item The seemingly trivial evaluate function forces the unit value returned
-        by a context, thus triggering evaluation of the demanded part of
-        observableList
   \item \texttt{demandCount} takes a context, and a function that operates over
         lists and the input list
   \item it applies instrumentListWithRef on the input list, producing an
         observableList, and applies the function and context over the
         observableList, triggering the injected instrumentation code
+  \item context is exerting some demand on the output of f
 }
 
 \begin{frame}[fragile]
@@ -192,11 +182,12 @@ demandCount c f as =
 \begin{itemize}
 \item<1->[]
 \begin{verbatim}
-ghci> let f = take 6
+> let f xs = takeLazy (lazy 6, xs)
+> let list = toLazyList [1; 2; 3; 4; 5]
 \end{verbatim}
 \item<2->[]
 \begin{verbatim}
-ghci> demandCount lazy f [1..5]
+> demandCount noDemand f list
 \end{verbatim}
 \item<3->[]
 \begin{verbatim}
@@ -204,7 +195,7 @@ ghci> demandCount lazy f [1..5]
 \end{verbatim}
 \item<4->[]
 \begin{verbatim}
-ghci> demandCount whnf f [1..5]
+> demandCount firstCons f list
 \end{verbatim}
 \item<5->[]
 \begin{verbatim}
@@ -212,7 +203,7 @@ ghci> demandCount whnf f [1..5]
 \end{verbatim}
 \item<6->[]
 \begin{verbatim}
-ghci> demandCount spineStrict f [1..5]
+> demandCount spineStrict f list
 \end{verbatim}
 \item<7->[]
 \begin{verbatim}
@@ -223,12 +214,15 @@ ghci> demandCount spineStrict f [1..5]
 
 \note[itemize]{
 \item Just some examples showing demandCount
+\item takeLazy is a function that takes the specified number of elements from a
+      lazy list and returns a lazyList
 \item Note that we simply treat \texttt{f} as a black box
 \item We don't need to know anything more about \texttt{f} other than the fact
       it typechecks with demandCount!
 }
 
 \begin{frame}[fragile]
+TODO: erase the numbers in tree
 \begin{columns}
 \begin{column}{0.7\textwidth}
 \frametitle{Beyond lists and numbers}
@@ -245,6 +239,7 @@ ghci> demandCount spineStrict f [1..5]
 
 \note[itemize]{
 \item Kenny:
+\item Arbitrary lazy algebraic datatypes
 \item This gives us a bare example that counts the number of cons cells forced,
       but what if we want more fine grained information of arbitrary algebraic
       data types?
@@ -254,19 +249,20 @@ ghci> demandCount spineStrict f [1..5]
 
 \begin{frame}[fragile]
 \frametitle{\texttt{ListDemand}}
-\begin{minted}{haskell}
-data List a =
-    Cons a (List a)
+\begin{minted}{ocaml}
+type 'a lazyList =
+  | Cons of ('a Lazy.t *
+             'a lazyList Lazy.t)
   | Nil
+------------------------------------
+type 'a thunk = T | E of 'a
 
-data Thunk a = T | E a
-
-data ListDemand d =
-    ConsD (Thunk d)
-          (Thunk (ListDemand d))
+type 'd listDemand =
+  | ConsD of ('d thunk *
+              'd listDemand thunk)
   | NilD
 
-data IntDemand = IntD
+type intDemand = IntD
 \end{minted}
 \end{frame}
 
@@ -277,21 +273,21 @@ data IntDemand = IntD
 
 \begin{frame}[fragile]
 \frametitle{Examples}
-\begin{minted}{haskell}
-data ListDemand d =
-    ConsD (Thunk d)
-          (Thunk (ListDemand d))
+\begin{minted}{ocaml}
+type 'd listDemand =
+  | ConsD of ('d thunk *
+              'd listDemand thunk)
   | NilD
 
-data IntDemand = IntD
+type intDemand = IntD
 ---------------------------------------------------
-ConsD T
-  (ConsD (E IntD)
-     (ConsD T T))
+ConsD (T,
+  ConsD (E IntD,
+    ConsD (T, T)))
 
-ConsD (E IntD)
-  (ConsD T
-    (ConsD (E IntD) (E NilD)))
+ConsD (E IntD,
+  ConsD (T,
+    ConsD (E IntD, E NilD)))
 \end{minted}
 \end{frame}
 
@@ -305,15 +301,17 @@ ConsD (E IntD)
 
 \begin{frame}[fragile]
 \frametitle{\texttt{TreeDemand}}
-\begin{minted}{haskell}
-data Tree a =
-    Node (Tree a) a (Tree a)
+\begin{minted}{ocaml}
+type 'a lazyTree =
+  | Node of ('a lazyTree Lazy.t *
+             'a Lazy.t *
+             'a lazyTree Lazy.t)
   | Leaf
 
-data TreeDemand d =
-    NodeD (Thunk (TreeDemand d))
-          (Thunk d)
-          (Thunk (TreeDemand d))
+type 'd treeDemand =
+  | NodeD of ('d treeDemand thunk *
+              'd thunk *
+              'd treeDemand thunk)
   | LeafD
 \end{minted}
 \end{frame}
@@ -328,16 +326,16 @@ data TreeDemand d =
 
 \begin{frame}[fragile]
 \frametitle{\texttt{ListDemand} vs \texttt{TreeDemand}}
-\begin{minted}{haskell}
-data ListDemand d =
-    ConsD (Thunk d)
-          (Thunk (ListDemand d))
+\begin{minted}{ocaml}
+type 'd listDemand =
+  | ConsD of ('d thunk *
+              'd listDemand thunk)
   | NilD
 
-data TreeDemand d =
-    NodeD (Thunk (TreeDemand d))
-          (Thunk d)
-          (Thunk (TreeDemand d))
+type 'd treeDemand =
+  | NodeD of ('d treeDemand thunk *
+              'd thunk *
+              'd treeDemand thunk)
   | LeafD
 \end{minted}
 \end{frame}
@@ -353,37 +351,40 @@ data TreeDemand d =
 \frametitle{Computing demand, generically}
 \begin{itemize}
 \item<1->[]
-\begin{minted}{haskell}
-demandList :: Context b -> ([Int] -> b)
-           -> [Int]
-           -> (b, Thunk (ListDemand IntDemand))
+\begin{minted}{ocaml}
+demandList : 'b context -> (int lazyList -> 'b)
+           -> int lazyList
+           -> ('b * intDemand listDemand thunk)
 
-demandTree :: Context b -> (Tree Int -> b)
-           -> Tree Int
-           -> (b, Thunk (TreeDemand IntDemand))
+demandTree : 'b context -> (int lazyTree -> 'b)
+           -> int lazyTree
+           -> ('b * intDemand treeDemand thunk)
 \end{minted}
 \item<2->[]
-\begin{minted}{haskell}
------------------------------------------------
-demand     :: Context b -> (a -> b) -> a
-           -> (b, Thunk (Demand a))
+\begin{minted}{ocaml}
+------------------------------------------------
+demand     : 'b context -> ('a -> 'b) -> 'a
+           -> ('b * ('a DEMAND) thunk)
 \end{minted}
 \end{itemize}
 \end{frame}
 
 \note[itemize]{
-\item FIX THE MARGIN ISSUES
-\item There is a generic transformation between a data type and its
-      corresponding data type representing a demand upon it
-\item \texttt{Demand} is a type level function that calculates the demand type
+\item There is a determinate relation between a lazy data structure and its
+      demand representation
 \item We return a \texttt{Thunk} of demand because the input might not be
       demanded at all
 \item As the input value is traversed by the function, which is driven by the
       context, the evaluation of each thunk builds a pointer based data
       structure which is isomorphic to the demand data type, which is then
       frozen into a demand representation
+\item We expect that the 'a parameter is some kind of lazy structure, and 'b is
+      also some kind of lazy structure
+\item We use generic programming to implement the DEMAND type for all algebraic
+      data types
 }
 
+\iffalse
 \begin{frame}[fragile]
 \frametitle{Generic \texttt{Demand} calculation}
 \begin{minted}{haskell}
@@ -399,16 +400,25 @@ type family Demand (x :: *) :: * where
 \item \texttt{FuncDemand} is isomorphic to IntDemand in that it only captures
       whether the function was used at all
 }
+\fi
 
 \begin{frame}[fragile]
 \frametitle{First-order specifications}
-\begin{minted}{haskell}
--- uncurried take
-take     :: (Int, [a]) -> [a]
-
-takeSpec :: Int -> [a]
-         -> Demand [a]
-         -> (Thunk (Demand Int), Thunk (Demand [a]))
+\begin{minted}{ocaml}
+deQSpec :  (int lazyList Lazy.t * int lazyList Lazy.t)
+        -> (intDemand thunk *
+             (intDemand listDemand thunk *
+              intDemand listDemand thunk))
+        -> (intDemand listDemand thunk *
+            intDemand listDemand thunk)
+deQSpec (front, back) (dInt, (dFront, dBack)) =
+  match Lazy.force front with
+    | Cons (_, _) -> (E (ConsD (dInt, dFront)), dBack)
+    | Nil -> (dBack,
+              (spineStrictD |back|)
+               U ((spineStrictD
+                   (|back| - |dFront|))
+                  @ (reverse (ConsD dInt dFront)))
 \end{minted}
 \end{frame}
 
@@ -434,9 +444,9 @@ takeSpec :: Int -> [a]
 
 \note[itemize]{
   \item To QuickCheck \texttt{takeSpec}, we use mechanisms from QuickCheck to
-        fuzz an Int and a [a] as inputs for \texttt{take}
-  \item We use the \texttt{CoArbitrary} mechanism to generate random contexts
-        that exerts non-trivial demand on the output values of \texttt{take}
+        fuzz an Int and a [a] as inputs
+  \item We can generate random contexts
+        that exerts non-trivial demand on the output values
   \item We use the generic \texttt{demand} function to kick off the entire
         computation
   \item We have now observed the demand on the input and also the demand on the
@@ -444,8 +454,10 @@ takeSpec :: Int -> [a]
         the specification expects.
   \item If we find a counterexample, we shrink the inputs first, and then shrink
         the reified demand, and re-exert that new demand on the output.
+  \item Higher-order also works! but we don't want to go into the details
 }
 
+\iffalse
 \begin{frame}[fragile]
 \frametitle{Higher-order specifications}
 \Huge PLACEHOLDER FOR PICTURE
@@ -461,6 +473,7 @@ takeSpec :: Int -> [a]
   \item At testing time, these specifications can be fuzzed through the same
         \texttt{CoArbitrary} mechanism
 }
+\fi
 
 \begin{frame}[fragile]
 \frametitle{Contributions}
@@ -481,5 +494,19 @@ StrictCheck is a lightweight tool that adds a very small overhead for
 instrumentation and observation of functional programs in Haskell. It also
 provides infrastructure for writing specifications and checking
 }
+
+\begin{frame}[fragile]
+\frametitle{Have questions?}
+Come ask us about \dots
+\begin{itemize}
+\item Higher-order specifications
+\item Generic programming
+\item Random generation of demand contexts
+\item Details of instrumentation
+\item What language are you actually implementing this in? \\ (Hint: it's not ML)
+\item[] \dots
+\end{itemize}
+\end{frame}
+
 
 \end{document}
