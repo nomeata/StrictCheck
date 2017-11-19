@@ -4,6 +4,7 @@
 \usepackage{pgfpages}
 \usepackage{xcolor}
 \usepackage{pifont}
+\usepackage{float}
 \usepackage{minted}
 
 %\setbeameroption{hide notes} % Only slides
@@ -127,7 +128,11 @@ treat it \emph{just like} functional correctness.
 
 \begin{frame}[fragile]
 \frametitle{Observing strictness}
-TODO: Just picture?
+\begin{figure}
+\centering
+\includegraphics[width=0.6\textwidth]{instrumentListWithRef}
+\caption{Instrumented List}
+\end{figure}
 \begin{minted}{ocaml}
 instrumentListWithRef : int ref
                       -> 'a lazyList
@@ -144,7 +149,29 @@ instrumentListWithRef : int ref
 
 \begin{frame}[fragile]
 \frametitle{Strictness doesn't exist in a vacuum}
-TODO: Pictures with color to show how much is demanded
+\begin{figure}
+\centering
+\includegraphics[width=0.7\textwidth]{noDemand}
+\caption{No Demand}
+\end{figure}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Strictness doesn't exist in a vacuum}
+\begin{figure}
+\centering
+\includegraphics[width=0.7\textwidth]{whnf}
+\caption{Weak Head Normal Form}
+\end{figure}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Strictness doesn't exist in a vacuum}
+\begin{figure}
+\centering
+\includegraphics[width=0.7\textwidth]{spinestrict}
+\caption{Spine Strict}
+\end{figure}
 \end{frame}
 
 \note[itemize]{
@@ -405,7 +432,7 @@ type family Demand (x :: *) :: * where
 \begin{frame}[fragile]
 \frametitle{First-order specifications}
 \begin{minted}{ocaml}
-deQSpec :  (int lazyList Lazy.t * int lazyList Lazy.t)
+deQSpec : (int lazyList Lazy.t * int lazyList Lazy.t)
         -> (intDemand thunk *
              (intDemand listDemand thunk *
               intDemand listDemand thunk))
@@ -439,7 +466,10 @@ deQSpec (front, back) (dInt, (dFront, dBack)) =
 
 \begin{frame}[fragile]
 \frametitle{Connecting specification with observation}
-\Huge PLACEHOLDER FOR PICTURE
+\begin{figure}
+\centering
+\includegraphics[width=1.0\textwidth]{specflow}
+\end{figure}
 \end{frame}
 
 \note[itemize]{
@@ -460,7 +490,6 @@ deQSpec (front, back) (dInt, (dFront, dBack)) =
 \iffalse
 \begin{frame}[fragile]
 \frametitle{Higher-order specifications}
-\Huge PLACEHOLDER FOR PICTURE
 \end{frame}
 
 \note[itemize]{
