@@ -111,9 +111,12 @@ treat it \emph{just like} functional correctness.
 \end{frame}
 
 \note[itemize]{
+\item PBRT is a technique for randomized testing which allows users to write
+  down an executable specification for a function and test whether it holds for
+  randomly generated inputs.
 \item QuickCheck gives functional correctness
 \item But laziness can't be observed by QuickCheck
-\item At the 3rd bullet point, say that laziness is not generally considered
+\item Say that laziness is not generally considered
       part of functional correctness much like how asymptotic runtime
       is not part of functional correctness because they are not directly
       observable
@@ -176,19 +179,17 @@ instrumentListWithRef : int ref
 
 \note[itemize]{
   \item These pictures are illustrations of a demand context on a lazy list
-  \item These functions have the type from list to unit
-  \item It might look like there's only one such function (namely the lazy
-        implementation)
-  \item There can actually be many different demand behaviors
-  \item Forcing the unit value triggers the strictness behavior on the input \texttt{a}
-  \item This gives us an easy way to observe the strictness behavior of a context
-}
+  \item This gives us an easy way to observe the strictness behavior of a
+    context
+  \item While these pictures might look like a data structure, they are meant to
+    describe the behavior of a context of evaluation on a lazy data structure of
+    this shape }
 
 \begin{frame}[fragile]
 \frametitle{Demanding an answer, lazily}
 \begin{minted}{ocaml}
 demandCount context f xs =
-    let count          = ref 0
+    let count = ref 0
         observableList =
           instrumentListWithRef count xs
     in context (f observableList); !count
@@ -293,9 +294,10 @@ type intDemand = IntD
 \end{frame}
 
 \note[itemize]{
-  \item Now, we can exactly characterize the demand on a list of Ints by
-        composing the type ListDemand and IntDemand
-}
+\item Now, we can exactly characterize a demand on a list of Ints by composing
+  the type ListDemand and IntDemand
+\item The type ListDemand is a reification of the demand placed upon a lazy list
+  during the course of evaluation in some context }
 
 \begin{frame}[fragile]
 \frametitle{Examples}
@@ -374,7 +376,7 @@ type 'd treeDemand =
 }
 
 \begin{frame}[fragile]
-\frametitle{Computing demand, generically}
+\frametitle{Observing demand, generically}
 \begin{itemize}
 \item<1->[]
 \begin{minted}{ocaml}
@@ -400,10 +402,6 @@ demand     : 'b context -> ('a -> 'b) -> 'a
       demand representation
 \item We return a \texttt{Thunk} of demand because the input might not be
       demanded at all
-\item As the input value is traversed by the function, which is driven by the
-      context, the evaluation of each thunk builds a pointer based data
-      structure which is isomorphic to the demand data type, which is then
-      frozen into a demand representation
 \item We expect that the 'a parameter is some kind of lazy structure, and 'b is
       also some kind of lazy structure
 \item We use generic programming to implement the DEMAND type for all algebraic
@@ -472,14 +470,13 @@ deQSpec (front, back) (dInt, (dFront, dBack)) =
 \end{frame}
 
 \note[itemize]{
-  \item To QuickCheck \texttt{takeSpec}, we use mechanisms from QuickCheck to
-        fuzz an Int and a [a] as inputs
+\item We randomly fuzz the inputs to the function, and
   \item We can generate random contexts
-        that exerts non-trivial demand on the output values
+        that exert non-trivial demand on the output values
   \item We use the generic \texttt{demand} function to kick off the entire
         computation
   \item We have now observed the demand on the input and also the demand on the
-        output of take, so we can just straightforwardly compare that to what
+        output, so we can just straightforwardly compare that to what
         the specification expects.
   \item If we find a counterexample, we shrink the inputs first, and then shrink
         the reified demand, and re-exert that new demand on the output.
@@ -528,8 +525,9 @@ provides infrastructure for writing specifications and checking
 Come ask us about \dots
 \begin{itemize}
 \item Higher-order specifications
-\item Generic programming
-\item Random generation of demand contexts
+\item Generic programming for any arity and datatype
+\item Random generation of partial demand contexts
+\item Efficiency of our implementation
 \item Details of instrumentation
 \item What language are you actually implementing this in? \\ (Hint: it's not ML)
 \item[] \dots
