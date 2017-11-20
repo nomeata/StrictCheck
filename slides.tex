@@ -70,8 +70,6 @@ let deQ (front, back) =
 \note[itemize]{
   \item As a micro example to motivate why thinking about laziness can be
         non-trivial, let's look at this queue
-  \item In this slide, we use call-by-name ML for simplicity of presentation,
-        but it can be implemented in OCaml using the Lazy module
   \item This has amortized O(1) performance cost.
   \item This queue is lazy as long as you don't empty the front, then it is
         fully lazy in the structure of the back list. It only forces the spine
@@ -115,11 +113,10 @@ treat it \emph{just like} functional correctness.
   down an executable specification for a function and test whether it holds for
   randomly generated inputs.
 \item QuickCheck gives functional correctness
-\item But laziness can't be observed by QuickCheck
-\item Say that laziness is not generally considered
-      part of functional correctness much like how asymptotic runtime
-      is not part of functional correctness because they are not directly
-      observable
+\item But laziness can't currently be observed by tools like QuickCheck
+\item Laziness is not generally considered part of functional correctness much
+  like how asymptotic runtime is not part of functional correctness because they
+  are not directly observable
 \item What if we make it observable? Then it's just part of functional correctness!
 }
 
@@ -275,7 +272,7 @@ demandCount context f xs =
 }
 
 \begin{frame}[fragile]
-\frametitle{\texttt{ListDemand}}
+  \frametitle{Reifying demand on lazy lists}
 \begin{minted}{ocaml}
 type 'a lazyList =
   | Cons of ('a Lazy.t *
@@ -328,7 +325,7 @@ ConsD (E IntD,
 }
 
 \begin{frame}[fragile]
-\frametitle{\texttt{TreeDemand}}
+  \frametitle{Reifying demand on lazy trees}
 \begin{minted}{ocaml}
 type 'a lazyTree =
   | Node of ('a lazyTree Lazy.t *
@@ -353,7 +350,7 @@ type 'd treeDemand =
 }
 
 \begin{frame}[fragile]
-\frametitle{\texttt{ListDemand} vs \texttt{TreeDemand}}
+  \frametitle{Comparing demands on lazy lists and trees}
 \begin{minted}{ocaml}
 type 'd listDemand =
   | ConsD of ('d thunk *
@@ -422,9 +419,24 @@ type family Demand (x :: *) :: * where
 \note[itemize]{
 \item For simplicity, we speak of types in terms of sums and products
 \item \texttt{FuncDemand} is isomorphic to IntDemand in that it only captures
-      whether the function was used at all
-}
-\fi
+  whether the function was used at all } \fi
+
+\begin{frame}[fragile]
+  \frametitle{Recalling \texttt{deQ}}
+  \begin{minted}{ocaml}
+type 'a lazyList =
+  | Cons of ('a Lazy.t *
+             'a lazyList Lazy.t)
+  | Nil
+
+let deQ (front, back) =
+  match Lazy.force front with
+    | Cons (a, front') -> (a, (front', back))
+    | Nil ->
+        let Cons (a, front') = reverseLazyList back
+        in (a, (front', lazy Nil))
+  \end{minted}
+\end{frame}
 
 \begin{frame}[fragile]
 \frametitle{First-order specifications}
@@ -530,7 +542,7 @@ Come ask us about \dots
 \item Efficiency of our implementation
 \item Details of instrumentation
 \item What language are you actually implementing this in? \\ (Hint: it's not ML)
-\item[] \dots
+\item[] \ \ $\vdots$
 \end{itemize}
 \end{frame}
 
