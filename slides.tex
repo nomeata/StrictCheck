@@ -47,6 +47,8 @@ type 'a lazyList =
 
 \note[itemize]{
 \item In this talk, we'll analyze functions that operate over lazy data structures
+\item In OCaml, Lazy is a standard library module that provides operators for
+      suspending computations into lazy values
 \item for instance, a lazy list like this
 \item A lazy list is just a list with all of its parameters wrapped in a lazy
       computation
@@ -429,7 +431,9 @@ type 'a lazyList =
              'a lazyList Lazy.t)
   | Nil
 
-let deQ (front, back) =
+let deQ (front, back)
+  : ('a Lazy.t * ('a lazyList Lazy.t *
+                  'a lazyList Lazy.t)) =
   match Lazy.force front with
     | Cons (a, front') -> (a, (front', back))
     | Nil ->
@@ -441,20 +445,14 @@ let deQ (front, back) =
 \begin{frame}[fragile]
 \frametitle{First-order specifications}
 \begin{minted}{ocaml}
-deQSpec : (int lazyList Lazy.t * int lazyList Lazy.t)
-        -> (intDemand thunk *
-             (intDemand listDemand thunk *
-              intDemand listDemand thunk))
-        -> (intDemand listDemand thunk *
-            intDemand listDemand thunk)
-deQSpec (front, back) (dInt, (dFront, dBack)) =
+let spec_deQ (front, back) (dInt, (dFront, dBack)) =
   match Lazy.force front with
-    | Cons (_, _) -> (E (ConsD (dInt, dFront)), dBack)
-    | Nil -> (dBack,
-              (spineStrictD |back|)
-               U ((spineStrictD
-                   (|back| - |dFront|))
-                  @ (reverse (ConsD dInt dFront)))
+    | Cons (_, _) ->
+        (E (ConsD (dInt, dFront)), dBack)
+    | Nil -> (E NilD,
+              spineStrictAs back
+                (pad (length back - lengthD dFront)
+                     (reverseD (ConsD dInt dFront))))
 \end{minted}
 \end{frame}
 
@@ -463,14 +461,15 @@ deQSpec (front, back) (dInt, (dFront, dBack)) =
         need to figure out how to write down a specification to check if whether
         a particular run of the program has the specified laziness according to
         the specification
-  \item Specifications goings backwards from demands on the output to demands on
+  \item Specifications go backwards from demands on the output to demands on
         the inputs of the function. This is because how much input is demanded
         depends on how much output is demanded, hence the arrows go the other
         way.
-  \item Note that \texttt{takeSpec} takes the same inputs as \texttt{take}
-        would. This is necessary in general because the demand behavior of
-        programs can depend on their inputs, as it is the case for
-        \texttt{take}!
+  \item Specifications are passed in the actual values of the inputs because
+        their demand behaviors can be dependent on those inputs
+  \item spineStrictAs takes a lazy data structure, and unions a spine strict
+        demand corresponding to the whole structure with another demand on some
+        sub-part of that structure
 }
 
 \begin{frame}[fragile]
@@ -485,14 +484,9 @@ deQSpec (front, back) (dInt, (dFront, dBack)) =
 \item We randomly fuzz the inputs to the function, and
   \item We can generate random contexts
         that exert non-trivial demand on the output values
-  \item We use the generic \texttt{demand} function to kick off the entire
-        computation
-  \item We have now observed the demand on the input and also the demand on the
+  \item We observe the demand on the input and also the demand on the
         output, so we can just straightforwardly compare that to what
         the specification expects.
-  \item If we find a counterexample, we shrink the inputs first, and then shrink
-        the reified demand, and re-exert that new demand on the output.
-  \item Higher-order also works! but we don't want to go into the details
 }
 
 \iffalse
@@ -526,19 +520,14 @@ The implementation is a work in progress.
 \footnotetext[1]{Simple (i.e. non-indexed, non-existential) types}
 \end{frame}
 
-\note{
-StrictCheck is a lightweight tool that adds a very small overhead for
-instrumentation and observation of functional programs in Haskell. It also
-provides infrastructure for writing specifications and checking
-}
-
 \begin{frame}[fragile]
 \frametitle{Have questions?}
-Come ask us about \dots
+Ask us about \dots
 \begin{itemize}
 \item Higher-order specifications
 \item Generic programming for any arity and datatype
 \item Random generation of partial demand contexts
+\item Shrinking of contexts and inputs
 \item Efficiency of our implementation
 \item Details of instrumentation
 \item What language are you actually implementing this in? \\ (Hint: it's not ML)
