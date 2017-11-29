@@ -6,3 +6,9 @@
 *auto/
 *.floo
 *.flooignore
+*.#*
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
