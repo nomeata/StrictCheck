@@ -94,3 +94,11 @@ In general, a correct specification should be monotonic in their demand, but spe
 We can simplify the Spec type family drastically, if we shift the burden of generating spec to the user, but provide them with an operator `getSpec` on funcions. The `getSpec` operator under the hood will use the same observation mechanism to first turn demand on the ouputs to a partial Context function on the output, and reify the demand on the input. (KWF: See above: this is the right solution, I'm very sure.)
 
 A nice debugging utility is to observe what pattern matches a spec makes on the input to the function under specification, and inspect if it demands more information than the function under spec (because a spec should not really need to). And these extra information could be the source of errors in specs. But note that a spec which inspects more information than it needs to is not necessarily a wrong one! For instance, if a spec says `length list == 0`, that may be more information than the specified function gets access to, but it's another way to write something that could be accomplished via a case statement that would not violate this information requirement. Determining if an arbitrary user-written spec is equivalent to some spec which does not violate the causality constraints we calculate is, of course, undecidable.
+
+Section title: "A Race To The Bottom"
+
+Maybe use unsafe ref updates to generate things? Need heterogenous list of pointers.
+
+Maybe heterogenous list of multi-hole tree zippers?
+
+Left-recursive fixpoints for continuations
