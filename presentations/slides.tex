@@ -1,3 +1,9 @@
+\newif\ifFinalProject
+\FinalProjecttrue
+
+\newif\ifNotFinalProject
+\ifFinalProject\NotFinalProjectfalse\else\NotFinalProjecttrue\fi
+
 \documentclass{beamer}
 \usetheme{metropolis}
 
@@ -23,6 +29,102 @@
 \begin{document}
 \frame{\titlepage}
 
+% Slides for CIS700 Final Presentation
+\ifFinalProject
+\begin{frame}[fragile]
+\frametitle{Lazy Evaluation?}
+\begin{itemize}
+\item<1->[]
+\begin{minted}{haskell}
+fibonacci =
+  0 : 1 : (zipWith (+) fibonacci (tail fibonacci))
+\end{minted}
+\item<2->[]
+\begin{minted}{haskell}
+ghci> fibonacci !! 10
+ghci> 55  
+\end{minted}
+\item<3->[]
+\begin{minted}{haskell}
+ghci> fibonacci !! 11
+ghci> 89
+\end{minted}
+\end{itemize}
+\end{frame}
+
+\note[itemize]{
+\item Let's start with an example
+\item \texttt{fibonacci} builds a Haskell list, where \text{:} is list cons constructor
+\item \texttt{fibonacci} builds a circular structure that contains a reference to itself
+\item This is an infinite list
+\item but its definition doesn't cause the interpreter to go to an infinite loop
+\item Core idea is: code doesn't execute unless output is used
+}
+
+\begin{frame}[fragile]
+  \frametitle{How to \textit{demand} a lazy value?}
+  \centering
+  \begin{figure}
+    \includegraphics[width=0.75\textwidth]{binary-tree}
+  \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]
+  \centering
+  \begin{figure}
+    \includegraphics[width=0.75\textwidth]{binary-tree-filled-1}
+  \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]
+  \centering
+  \begin{figure}
+    \includegraphics[width=0.75\textwidth]{binary-tree-filled-2}
+  \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]
+  \centering
+  \begin{figure}
+    \includegraphics[width=0.75\textwidth]{binary-tree-filled-3}
+  \end{figure}
+\end{frame}
+
+\note[itemize]{
+\item A lazy value can be thought of as a pointer graph with regions that have
+  not matierialized/evaluated yet
+\item In this graph, we use white regions to represent parts of the value that
+  have not been evaluated yet
+\item We evaluate more of the value by following the pointers
+}
+
+\begin{frame}[fragile]
+\frametitle{Pattern Matching}
+\begin{minted}{haskell}
+tail :: [Int] -> [Int]
+tail xs = case xs of
+            [] -> []
+            (_ : xs) -> xs
+\end{minted}
+\end{frame}
+
+\note[itemize]{
+\item In a functional language like Haskell, we traverse the pointer graphs of
+  lazy values by performing pattern matching on them
+\item In the \texttt{tail} function for lists, we evaluate the input list to its
+  first constructor
+\item Useful: think about Randoop, it iteratively generates new API calls, and
+  alternates between generating and testing.
+\item If Randoop were able to generate these call sequences lazily, then from
+  Randoop developer's perspective there can just be a module that focuses on
+  generation and one that focuses on testing
+\item Since unused generated API calls are not actually evaluated, it doesn't
+  cost additional CPU resource
+}
+
+% End of slides for CIS700 Final Presentation
+\fi
+
 \begin{frame}
 \frametitle{Being lazy is sometimes vital, but\dots}
 \Large\dots it can lead to unintended consequences.
@@ -35,6 +137,7 @@
 \item (Spark) and in the field of big-data processing, for example, Spark
 }
 
+\ifNotFinalProject
 \begin{frame}[fragile]
 \frametitle{Lazy lists}
 \begin{minted}{ocaml}
@@ -77,6 +180,8 @@ let deQ (front, back) =
         fully lazy in the structure of the back list. It only forces the spine
         of the back list when the front list is emptied.
 }
+\fi
+
 
 \iffalse
 \begin{frame}
@@ -423,6 +528,7 @@ type family Demand (x :: *) :: * where
 \item \texttt{FuncDemand} is isomorphic to IntDemand in that it only captures
   whether the function was used at all } \fi
 
+\ifNotFinalProject
 \begin{frame}[fragile]
   \frametitle{Recalling \texttt{deQ}}
   \begin{minted}{ocaml}
@@ -471,6 +577,7 @@ let spec_deQ (front, back) (dInt, (dFront, dBack)) =
         demand corresponding to the whole structure with another demand on some
         sub-part of that structure
 }
+\fi
 
 \begin{frame}[fragile]
 \frametitle{Connecting specification with observation}
