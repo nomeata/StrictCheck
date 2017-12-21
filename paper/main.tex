@@ -1,0 +1,299 @@
+% !!! PLEASE DON'T CHANGE THESE !!! INSTEAD DEFINE YOUR OWN texdirectives.tex !!!
+% These flags are for the final camera ready version for POPL
+% Draft, full version flags
+\newif\ifdraft\drafttrue
+\newif\iffull\fullfalse
+\newif\ifanon\anonfalse
+\newif\iflast\lasttrue
+
+% !!! PLEASE DON'T CHANGE THESE !!! INSTEAD DEFINE YOUR OWN texdirectives.tex !!!
+\makeatletter \@input{texdirectives} \makeatother
+
+\documentclass[acmsmall,review]{acmart}\settopmatter{}
+
+%% Note: Authors migrating a paper from PACMPL format to traditional
+%% SIGPLAN proceedings format should change 'acmlarge' to
+%% 'sigplan,10pt'.
+
+
+%% Some recommended packages.
+\usepackage{booktabs}   %% For formal tables:
+                        %% http://ctan.org/pkg/booktabs
+\usepackage{subcaption} %% For complex figures with subfigures/subcaptions
+                        %% http://ctan.org/pkg/subcaption
+
+\usepackage{xspace}
+\usepackage{preamble}
+\usepackage{relsize}
+%\usepackage{mathpartir}
+
+\makeatletter\if@ACM@journal\makeatother
+%% Journal information (used by PACMPL format)
+%% Supplied to authors by publisher for camera-ready submission
+% \setcopyright{rightsretained}
+% \acmJournal{PACMPL}
+% \acmYear{2018} \copyrightyear{2018} \acmVolume{2} \acmNumber{POPL} \acmArticle{45} \acmMonth{1} \acmPrice{}\acmDOI{10.1145/3158133}
+
+%% Copyright information
+%% Supplied to authors (based on authors' rights management selection;
+%% see authors.acm.org) by publisher for camera-ready submission
+%\setcopyright{acmcopyright}
+%\setcopyright{acmlicensed}
+%\setcopyright{rightsretained}
+%\copyrightyear{2017}           %% If different from \acmYear
+
+
+%% Bibliography style
+\bibliographystyle{ACM-Reference-Format}
+%% Citation style
+%% Note: author/year citations are required for papers published as an
+%% issue of PACMPL.
+\citestyle{acmauthoryear}   %% For author/year citations
+
+\def\l{l}
+
+\begin{document}
+
+%% Title information
+\title{Keep your Laziness in Check}
+                                        %% when present, will be used in
+                                        %% header instead of Full Title.
+%\titlenote{with title note}             %% \titlenote is optional;
+%                                        %% can be repeated if necessary;
+%                                        %% contents suppressed with 'anonymous'
+%\subtitle{}                     %% \subtitle is optional
+%\subtitlenote{with subtitle note}       %% \subtitlenote is optional;
+                                        %% can be repeated if necessary;
+                                        %% contents suppressed with 'anonymous'
+
+
+%% Author information
+%% Contents and number of authors suppressed with 'anonymous'.
+%% Each author should be introduced by \author, followed by
+%% \authornote (optional), \orcid (optional), \affiliation, and
+%% \email.
+%% An author may have multiple affiliations and/or emails; repeat the
+%% appropriate command.
+%% Many elements are not rendered, but should be provided for metadata
+%% extraction tools.
+
+%% Author with single affiliation.
+\author{Kenneth Fonner}
+%\authornote{with author1 note}          %% \authornote is optional;
+                                        %% can be repeated if necessary
+%\orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
+\affiliation{
+%  \position{Position1}
+%  \department{Department1}              %% \department is recommended
+  \institution{University of Pennsylvania}            %% \institution is required
+%  \streetaddress{Street1 Address1}
+%  \city{City1}
+%  \state{State1}
+%  \postcode{Post-Code1}
+  \country{USA}
+}
+\email{kwf@very.science}          %% \email is recommended
+
+%% Author with single affiliation.
+\author{Hengchu Zhang}
+%\authornote{with author1 note}          %% \authornote is optional;
+                                        %% can be repeated if necessary
+%\orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
+\affiliation{
+%  \position{Position1}
+%  \department{Department1}              %% \department is recommended
+  \institution{University of Pennsylvania}            %% \institution is required
+%  \streetaddress{Street1 Address1}
+%  \city{City1}
+%  \state{State1}
+%  \postcode{Post-Code1}
+  \country{USA}
+}
+\email{hengchu@seas.upenn.edu}          %% \email is recommended
+
+%% Author with single affiliation.
+\author{Leonidas Lampropoulos}
+%\authornote{with author1 note}          %% \authornote is optional;
+                                        %% can be repeated if necessary
+%\orcid{nnnn-nnnn-nnnn-nnnn}             %% \orcid is optional
+\affiliation{
+%  \position{Position1}
+%  \department{Department1}              %% \department is recommended
+  \institution{University of Pennsylvania}            %% \institution is required
+%  \streetaddress{Street1 Address1}
+%  \city{City1}
+%  \state{State1}
+%  \postcode{Post-Code1}
+  \country{USA}
+}
+\email{llamp@seas.upenn.edu}          %% \email is recommended
+
+%% Paper note
+%% The \thanks command may be used to create a "paper note" ---
+%% similar to a title note or an author note, but not explicitly
+%% associated with a particular element.  It will appear immediately
+%% above the permission/copyright statement.
+%\thanks{with paper note}                %% \thanks is optional
+                                        %% can be repeated if necesary
+                                        %% contents suppressed with 'anonymous'
+
+
+%% Abstract
+%% Note: \begin{abstract}...\end{abstract} environment must come
+%% before \maketitle command
+\begin{abstract}
+StrictCheck.
+
+Because LazyCheck was taken.
+\end{abstract}
+
+
+%% 2012 ACM Computing Classification System (CSS) concepts
+%% Generate at 'http://dl.acm.org/ccs/ccs.cfm'.
+\begin{CCSXML}
+<ccs2012>
+<concept>
+<concept_id>10011007.10011006.10011008</concept_id>
+<concept_desc>Software and its engineering~General programming languages</concept_desc>
+<concept_significance>500</concept_significance>
+</concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Software and its engineering~General programming languages}
+%% End of generated code
+
+
+%% Keywords
+%% comma separated list
+\keywords{Random Testing, Laziness, Haskell}  %% \keywords is optional
+
+%% \maketitle
+%% Note: \maketitle command must come after title commands, author
+%% commands, abstract environment, Computing Classification System
+%% environment and commands, and keywords command.
+\maketitle
+
+% \lk{
+% \begin{description}
+%   \item[slant] \the\fontdimen1\font
+%   \item[interword space] \the\fontdimen2\font
+%   \item[interword stretch] \the\fontdimen3\font
+%   \item[interword shrink] \the\fontdimen4\font
+%   \item[extra space] \the\fontdimen7\font
+%   \item[xspaceskip] \the\xspaceskip
+%   \item[hyphenchar] \the\hyphenchar\font
+% \end{description}
+% }
+
+\section{Introduction}
+\label{sec:intro}
+
+\begin{itemize}
+\item Laziness is a fundamental feature in Haskell \leo{WhyFPmatters?}
+\item However, reasoning about programs with laziness (performance, behavior) is hard.
+\item It is very easy to use a too-lazy or too-strict implementation that yields different results.
+\item FRP quote here?
+\item
+\item Example: folds.
+\item \lk{fold} to calculate sum breaks for large lists because of thunks
+\item \lk{fold'} is good for some, but not for average because of whnf.
+\item We need an implementation that is strict in the pair as well.
+\item
+\item Which leads to the natural question, how can we test the laziness behavior of functions?
+\item Even worse, how can we even {\em specify} the laziness behavior?
+\end{itemize}
+
+Our technical contributions are as follows:
+\begin{itemize}
+\item We introduce a novel approach to specifying the laziness behavior of functions that is
+{\em precise} \leo{define}. \leo{Also add drawbacks/partiality here? If not here, where in the intro?}
+\item We propose a random testing approach to test such specifications.
+\item We implement StrictCheck. \leo{In order for these last two points to be different, we need
+something about the cool/awesome hacks in the implementation to point out here}
+\item As a side contribution? We fix the function generaton of QuickCheck to produce lazy/partial functions instead
+of fully strict ones all the time.
+\end{itemize}
+%
+Section~\ref{sec:related} discusses related work. We conclude and draw
+directions for future work in Section~\ref{sec:concl}.
+
+\section{Strictness Specifications, by Example}
+\label{sec:quickchick}
+
+\leo{Punned names for sections? Or is that just an urns thing? :P }
+
+\begin{itemize}
+\item In this section we will showcase our proposed specification language \leo{It's not a language tho}
+\item while introducing the running example of our paper: maps.
+\item Maps are particularly well-suited for a discussion of laziness because of the interesting different
+possible behaviors: strict-maps, value-lazy maps \leo{Point out Data.Map.Strict vs Data.Map}, and fully lazy maps
+\item For simplicity, we will use binary search trees as maps, assuming the keys are integers and forego balancing
+as the added complexity is irrelevant to the laziness discussion. \leo{Can we claim it wouldn't matter at all? I think so}
+\end{itemize}
+
+\paragraph*{Binary Search Trees}
+
+\leo{data structures - code - short explanation}
+
+\paragraph*{Characterizing Laziness}
+
+\begin{itemize}
+\item Specification of laziness - TreeD data structure \leo{Mention how it will be generically derived}
+\item Strict / Spine-strict maps
+\item Fully lazy map as a between spec
+\end{itemize}
+
+\section{Evaluation}
+\label{sec:eval}
+
+\section{Related Work}
+\label{sec:related}
+
+\leo{If we want to break up this into smaller chunks, use paragraph*}
+
+\section{Conclusion and future work}
+\label{sec:concl}
+
+Machine Learning for automatically synthesizing specs? Let's go crazy!
+
+%% Acknowledgments
+\begin{acks}                            %% acks environment is optional
+                                        %% contents suppressed with 'anonymous'
+  %% Commands \grantsponsor{<sponsorID>}{<name>}{<url>} and
+  %% \grantnum[<url>]{<sponsorID>}{<number>} should be used to
+  %% acknowledge financial support and will be used by metadata
+  %% extraction tools.
+We are grateful to
+%
+Matt Parsons,
+Matthew Weaver,
+Jennifer Paykin,
+Antal Spector-Zabusky,
+and the Penn PLClub 
+for their useful comments. 
+This material is based upon work supported by the
+\grantsponsor{GS100000001}{National Science
+  Foundation}{http://dx.doi.org/10.13039/100000001} under Grant
+No.~\grantnum{GS100000001}{1421243} ({\em Random Testing for Language
+Design}), Grant No.~\grantnum{GS100000001}{1521523} ({\em Expeditions
+in Computing: The Science of Deep Specification}), and \leo{Kenny,
+Hengchu, ask for grant numbers names} Any opinions, findings, and
+conclusions or recommendations expressed in this material are those of
+the author and do not necessarily reflect the views of the National
+Science Foundation.
+
+\end{acks}
+
+%% Bibliography
+%\bibliography{bibfile}
+\bibliography{local}
+
+
+%% Appendix
+%\appendix
+%\section{Appendix}
+% 
+%Text of appendix \ldots
+
+\end{document}

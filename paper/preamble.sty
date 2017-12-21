@@ -1,0 +1,84 @@
+\usepackage{xcolor}
+\usepackage{xspace}
+\usepackage{relsize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Colors
+\definecolor{dkblue}{rgb}{0,0.1,0.5}
+\definecolor{dkgreen}{rgb}{0,0.5,0}
+\definecolor{dkred}{rgb}{0.7,0,0}
+\definecolor{dkpurple}{rgb}{0.7,0,0.4}
+\definecolor{olive}{rgb}{0.4, 0.4, 0.0}
+\definecolor{teal}{rgb}{0.0,0.5,0.5}
+\definecolor{azure}{rgb}{0.0, 0.4, .8}
+
+% Comments
+\long\def\comment#1{}
+\newcommand{\finish}[1]{\ifdraft\textcolor{gray}{[#1]}\fi}
+\newcommand{\FINISH}[1]{\ifdraft\textcolor{blue}{[#1]}\fi}
+\newcommand{\feedback}[1]{\ifdraft\textcolor{dkblue}{[#1]}\fi}
+\newcommand{\review}[1]{\ifdraft\textcolor{dkblue}{[Review:\fi #1\ifdraft]\fi}}
+\newcommand{\strikeout}[1]{\ifdraft\sout{#1}\fi{}}
+
+\newcommand{\cn}{\ifdraft\textsuperscript{\textcolor{blue}{[citation needed]}}\xspace\fi}
+\newcommand{\comm}[3]{\ifdraft\textcolor{#1}{[#2: #3]}\fi}
+\newcommand{\bcp}[1]{\comm{dkpurple}{BCP}{#1}}
+\newcommand{\bcpsmall}[1]{\ifsmall\comm{dkpurple}{BCP}{#1}\fi}
+\newcommand{\leo}[1]{\comm{dkgreen}{LEO}{#1}} % 
+%\newcommand{\ch}[1]{\comm{olive}{CH}{#1}} % Catalin
+%\newcommand{\ly}[1]{\comm{orange}{LY}{#1}}
+\newcommand{\zoe}[1]{\comm{teal}{Zoe}{#1}}
+\newcommand{\asz}[1]{\comm{azure}{ASZ}{#1}}
+
+\newcommand{\fix}[1]{\comm{red}{FIX}{#1}}
+\newcommand{\rephrase}[1]{\comm{red}{REPHRASE}{#1}}
+\newcommand{\TODO}[1]{\comm{red}{TODO}{#1}}
+
+\newcommand*{\EG}{e.g.,\xspace}
+\newcommand*{\IE}{i.e.,\xspace}
+\newcommand*{\ETAL}{{\em et al.}\xspace}
+\newcommand*{\ETC}{etc.\xspace}
+
+\newcommand{\Hritcu}{Hri\c{t}cu}
+
+\newcommand*{\smalltt}[1]{{\tt {\small #1}}}
+
+\newcommand{\citeEtcShort}[1]{\iffull\cite{#1}\else\cite[etc.]{#1}\fi}
+
+% Fancy braces, taken from here (they have even fancier versions there): 
+% https://tex.stackexchange.com/questions/100966/defining-scalable-white-curly-brackets-and-and
+
+\usepackage{accsupp}
+
+\newcommand*{\llbrace}{%
+  \BeginAccSupp{method=hex,unicode,ActualText=2983}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char102}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+  \EndAccSupp{}%
+}
+\newcommand*{\rrbrace}{%
+  \BeginAccSupp{method=hex,unicode,ActualText=2984}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
+  \EndAccSupp{}%
+}
+
+\newenvironment{inlineenum}{%
+\begin{enumerate*}
+  [label=(\arabic*),
+   before=\unskip{ }
+  ]
+}{%
+  \end{enumerate*}%
+}
+
+\def\endofproof{\hfill$\Box$}
+
+\newcommand{\lk}[1]{%
+  \texttt{%
+    \fontdimen2\font=2pt   % Shrink default inter-word space
+    #1}}
+
