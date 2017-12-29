@@ -189,20 +189,43 @@ Because LazyCheck was taken.
 \section{Introduction}
 \label{sec:intro}
 
+
 \begin{itemize}
 \item Laziness is a fundamental feature in Haskell \leo{WhyFPmatters?}
 \item However, reasoning about programs with laziness (performance, behavior) is hard.
 \item It is very easy to use a too-lazy or too-strict implementation that yields different results.
 \item FRP quote here?
-\item
-\item Example: folds.
-\item \lk{fold} to calculate sum breaks for large lists because of thunks
-\item \lk{fold'} is good for some, but not for average because of whnf.
-\item We need an implementation that is strict in the pair as well.
-\item
+\end{itemize}
+
+Consider the following implementation of the \lk{sum} function:
+\leo{I created an environment for this so that we can tweak them all as needed}
+\begin{inlinecode}
+sum = foldl (+) 0
+\end{inlinecode}
+%
+\begin{itemize}
+\item As many readers/Haskellers have probably encountered, such an implementation
+   can be inefficient due to space leaks because of laziness.
+\item When summing over a large list, instead of calculating the running sum as we traverse
+   the list, we build an increasingly larger thunk that will be forced in the end.
+\item An easy solution is to use a stricter fold, like \lk{foldl'}, which forces the
+   fold accumulator in weak head normal form.
+\item However, even that is not enough for all cases.
+\item Consider a single-traversal computation of an average where we keep both a running sum and a running length in an accumulator.
+\end{itemize}
+%
+\begin{inlinecode}
+avg = uncurry (/) . foldl (\(s,n) x -> (s + x, n + 1)) (0,0)
+\end{inlinecode}
+%
+\begin{itemize}
+\item In this case, both \lk{foldl} and \lk{foldl'}, construct a thunk, since forcing a pair into weak head normal form does not force either component.
+\item We need an implementation that is strict in those components as well.
 \item Which leads to the natural question, how can we test the laziness behavior of functions?
 \item Even worse, how can we even {\em specify} the laziness behavior?
 \end{itemize}
+
+\leo{We probably need a paragraph that explains what we want to do here, not directly a jump into the contributions}
 
 Our technical contributions are as follows:
 \begin{itemize}

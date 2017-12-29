@@ -1,6 +1,7 @@
 \usepackage{xcolor}
 \usepackage{xspace}
 \usepackage{relsize}
+\usepackage{listings}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -82,3 +83,13 @@
     \fontdimen2\font=2pt   % Shrink default inter-word space
     #1}}
 
+\lstset{rangebeginprefix=(*\ begin\ ,%
+        rangebeginsuffix=\ *),%
+        rangeendprefix=(*\ end\ ,%
+        rangeendsuffix=\ *),
+        includerangemarker=false,
+        basicstyle=\ttfamily\small,
+        upquote=true}
+\lstnewenvironment{inlinecode}{\lstset{language=Haskell,mathescape=true,basicstyle=\ttfamily\small}}{}
+% If you guys want to include verbatim code from files, we could do something like this
+%\newcommand{\qccode}[2]{\lstinputlisting[language=SSR,linerange={#2},basicstyle=\ttfamily\small]{\pubrepo/#1}}
