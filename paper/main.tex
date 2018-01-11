@@ -189,31 +189,23 @@ Because LazyCheck was taken.
 \section{Introduction}
 \label{sec:intro}
 
+\hzh{Rewrite counter: 1}
 \leo{I want to keep a counter on how many times we'll rewrite this intro :)}
-\leo{We *have* to mention Haskell in this list. Maybe with John's Why FP matters?}
-Laziness is ubiquitous in modern software engineering: the big-data
-framework Spark uses laziness to drive computations on demand
-(\hzh{find references to spark}), Apple's new programming language
-Swift includes lazy evaluation for initializing expensive resources as
-needed\cn, and many functional reactive programming web frameworks rely
-on it\cn. 
+
+John Hughes has argued adequately that lazy evaluation brings tremendous power
+to modularization of functional programming in his seminal work \textit{Why
+Functional Programming Matters} ~\cite{WhyFPMatters}. Haskell is one of the most
+popular programming languages that gives its programmers the power of lazy
+evaluation.
 %
-Unfortunately, reasoning about the performance of lazy programs with
-laziness is hard. It is very easy\leo{I don't like 'easy' here. It has
-a slightly bad antithesis with the previous 'hard' as it doesn't refer
-to the same thing} to accidentally make a program too lazy or too
-strict, which in turn makes the program behave differently than 
-the programmer had intended.
+Unfortunately, reasoning about the performance of lazy programs in Haskell is
+difficult. Programmers often accidentally make a program too lazy or too strict,
+and as a result, their programs behave differently than expected.
 
 \leo{Didn't we have an FRP quote by someone that Laziness was the third source of
 bugs or something? Work that in?}
-
-\hzh{Since laziness is a fundamental feature of the programming language Haskell, we
-will explore how to observe and specify laziness using just the features
-provided by Haskell, without custom compiler support.}
-\leo{It feels more natural to go directly into the example that explains this difficulty.
-Mentioning haskell needs to happen earlier, maybe in the original
-list. Or in a ``starting with Haskell'' way}
+\hzh{Ryan Trinkle (author of Reflex) said laziness was the 3rd most difficult thing to
+get right, but let's check with him on whether we can quote him on that.}
 
 For example, consider the following simple Haskell implementation of the \lk{sum} function:
 \leo{I created an environment for this so that we can tweak them all as needed}
@@ -223,43 +215,46 @@ sum = foldl (+) 0
 %
 Although this seemingly innocent implementation of sum will produce correct
 results on small lists of numbers, it will quickly run out of memory on larger
-lists. The culprit here is the strictness behavior of \lk{foldl}---it does not
-force the accumulated result during the fold. Instead, calling this \lk{sum} on a list
-produces a thunk that is linear in the size of of the input list.
+lists. The culprit here is the laziness behavior of \lk{foldl}---it does not
+force the accumulated result during the fold. Instead, calling this \lk{sum} on
+a list produces a thunk that is linear in the size of of the input list, and
+this thunk will not be evaluated until the result of sum is used in another
+computation.
 %
-We can fix this space leak for \lk{sum} using a strict fold, \lk{foldl'},
-which forces the accumulator.
+We can fix this space leak for \lk{sum} using a strict fold, \lk{foldl'}, which
+eagerly forces the accumulator, and avoids creating a space-leaking thunk.
 
-However, even this is not enough in general. Consider a
-single-traversal computation of an average where we keep both a
-running sum and a running length in an accumulator.
+However, using \lk{foldl'} is not sufficient to avoid space leaks in
+general. Consider a single-traversal computation of an average where we keep
+both a running sum and a running counter in an accumulator.
 %
 \begin{inlinecode}
 avg = uncurry (/) . foldl (\(s,n) x -> (s + x, n + 1)) (0,0)
 \end{inlinecode}
 %
 In this case, both \lk{foldl} and \lk{foldl'} construct thunks linear in the
-size of the input list, since forcing a pair into weak head normal form does not
-force either component\leo{of the pair?}.
+size of the input list, since forcing a lazy pair only evaluates it to its weak
+head normal form, and it does not evaluate either component of the pair.
 
 How, then, can we test and catch these laziness bugs before they
 manifest themselves in production? Is it possible to precisely specify
-laziness behavior just as we would functional correctness?
+laziness behavior just as we would for functional correctness?
 %
-\leo{Rewrite the next.}
-In this paper, we demonstrate how to observe laziness from within
-Haskell itself, and how to write down a specification for laziness
-also using Haskell.
+In this paper, we demonstrate techniques for observing laziness in Haskell, and
+propose a system of creating specifications of lazy Haskell programs. We
+implement these ideas as a Haskell library.
 
 Our technical contributions are as follows:
 \begin{itemize}
 \item We introduce a novel approach to specifying the laziness behavior of functions that is
-{\em precise} \leo{define}. \leo{Also add drawbacks/partiality here? If not here, where in the intro?}
-\item We propose a random testing approach to test such specifications.
-\item We demonstrate non-trivial generic programming techniques to apply StrictCheck to almost all data types. \leo{In order for these last two points to be different, we need
-something about the cool/awesome hacks in the implementation to point out here}
-\item As a side contribution? We fix the function generaton of QuickCheck to produce lazy/partial functions instead
-of fully strict ones all the time.
+{\em precise}. Such specifications are expressive enough to capture exactly how
+much evaluation occurs within a data structure \leo{Also add
+drawbacks/partiality here? If not here, where in the intro?} \hzh{I'm not sure
+if we should bring in partiality (in the sense of divergence/nontermination) yet
+since that seems like a rather technical detail of the spec}
+\item We propose a framework for testing against such specifications.
+\item We improve upon the random function generators from QuickCheck to generate functions with arbitrary laziness behaviors.
+\item We demonstrate non-trivial generic programming techniques to apply StrictCheck to almost all data types.
 \end{itemize}
 %
 Section~\ref{sec:related} discusses related work. We conclude and draw
