@@ -92,7 +92,7 @@
 %  \postcode{Post-Code1}
   \country{USA}
 }
-\email{kwf@very.science}          %% \email is recommended
+\email{kfoner@seas.upenn.edu}          %% \email is recommended
 
 %% Author with single affiliation.
 \author{Hengchu Zhang}
@@ -190,6 +190,15 @@ Because LazyCheck was taken.
 \label{sec:intro}
 
 \hzh{Rewrite counter: 1}
+\hzh{Rewrite the intro using different running examples, foldl vs foldr on stream manipulations?}
+\hzh{We can write a hand-crafted spec for take, can we show that we can create this spec by composing the spec for foldr (but not using the one with foldl)}
+\hzh{implement take in 3 ways: foldl, foldr and explicitly as the opening example, and then ask if they're equivalent? (they're not!)}
+\hzh{Okasaki has 2 functions that appends a list to the reversal of another list, one of which is too strict and the other one is just the right amount of lazy (thus incremental)}
+\hzh{The amortized one is hard to specify exactly, but we can introduce approximate specification and specify it approximately}
+\hzh{we need to carefully avoid saying this is a tool for specifying the time complexity of functions}
+\hzh{Implementing functional programs that make clever use of laziness is very easy to get wrong, and we provide a solution to make sure the programmer got it right. We almost have no way of testing it right now before StrictCheck.}
+\hzh{Email Ryan Trinkle and Dan Winograd-Cort about FRP and strictness, and try to use their examples as another problem we can solve in the intro}
+\hzh{Lazy maps will mess up memoization if you're overly strict, use knapsack as an example}
 \leo{I want to keep a counter on how many times we'll rewrite this intro :)}
 
 John Hughes has argued adequately that lazy evaluation brings tremendous power
@@ -228,6 +237,7 @@ However, using \lk{foldl'} is not sufficient to avoid space leaks in
 general. Consider a single-traversal computation of an average where we keep
 both a running sum and a running counter in an accumulator.
 %
+\hzh{TODO: rewrite this, let bind the foldl}
 \begin{inlinecode}
 avg = uncurry (/) . foldl (\(s,n) x -> (s + x, n + 1)) (0,0)
 \end{inlinecode}
@@ -247,11 +257,12 @@ implement these ideas as a Haskell library.
 Our technical contributions are as follows:
 \begin{itemize}
 \item We introduce a novel approach to specifying the laziness behavior of functions that is
-{\em precise}. Such specifications are expressive enough to capture exactly how
-much evaluation occurs within a data structure \leo{Also add
-drawbacks/partiality here? If not here, where in the intro?} \hzh{I'm not sure
-if we should bring in partiality (in the sense of divergence/nontermination) yet
-since that seems like a rather technical detail of the spec}
+{\em precise} \hzh{and compositional}. Such specifications are
+expressive enough to capture exactly how much evaluation occurs within
+a data structure \leo{Also add drawbacks/partiality here? If not here,
+where in the intro?} \hzh{I'm not sure if we should bring in
+partiality (in the sense of divergence/nontermination) yet since that
+seems like a rather technical detail of the spec}
 \item We propose a framework for testing against such specifications.
 \item We improve upon the random function generators from QuickCheck to generate functions with arbitrary laziness behaviors.
 \item We demonstrate non-trivial generic programming techniques to apply StrictCheck to almost all data types.
