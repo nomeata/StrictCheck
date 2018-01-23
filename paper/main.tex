@@ -189,7 +189,7 @@ Because LazyCheck was taken.
 \section{Introduction}
 \label{sec:intro}
 
-\hzh{Rewrite counter: 1}
+\hzh{Rewrite counter: 2}
 \hzh{Rewrite the intro using different running examples, foldl vs foldr on stream manipulations?}
 \hzh{We can write a hand-crafted spec for take, can we show that we can create this spec by composing the spec for foldr (but not using the one with foldl)}
 \hzh{implement take in 3 ways: foldl, foldr and explicitly as the opening example, and then ask if they're equivalent? (they're not!)}
@@ -198,57 +198,66 @@ Because LazyCheck was taken.
 \hzh{we need to carefully avoid saying this is a tool for specifying the time complexity of functions}
 \hzh{Implementing functional programs that make clever use of laziness is very easy to get wrong, and we provide a solution to make sure the programmer got it right. We almost have no way of testing it right now before StrictCheck.}
 \hzh{Email Ryan Trinkle and Dan Winograd-Cort about FRP and strictness, and try to use their examples as another problem we can solve in the intro}
-\hzh{Lazy maps will mess up memoization if you're overly strict, use knapsack as an example}
+\hzh{Maps will mess up memoization if you're overly strict, use knapsack as an example}
 \leo{I want to keep a counter on how many times we'll rewrite this intro :)}
 
-John Hughes has argued adequately that lazy evaluation brings tremendous power
-to modularization of functional programming in his seminal work \textit{Why
-Functional Programming Matters} ~\cite{WhyFPMatters}. Haskell is one of the most
-popular programming languages that gives its programmers the power of lazy
-evaluation.
+Lazy evaluation brings tremendous power to modularization of functional
+programming ~\cite{WhyFPMatters}. Haskell is one of the most popular programming
+languages that gives its programmers the power of lazy evaluation.
+
+To demonstrate the benefits of lazy evaluaation, let us consider a dynamic
+programming solution of the knapsack problem in Haskell.
 %
-Unfortunately, reasoning about the performance of lazy programs in Haskell is
-difficult. Programmers often accidentally make a program too lazy or too strict,
-and as a result, their programs behave differently than expected.
+The inputs of the knapsack problem are two sequences of numbers $w_i$ and $v_i$
+where $i = 1, \dots, n$, and each of $w_i$ and $v_i$ specify the weight and the
+value of the $i$th item. The solution presents the maximum value achievable
+using a subset of the items such that their combined weight is under a limit
+$W$.
+
+The typical dynamic programming approach for knapsack maintains a table $OPT[][]$,
+where the entry $OPT[j][k]$ keeps the best value achievable using only items
+$1\dots j$ and a weight limit of $k$. The table satisfies the following
+recurrence relation: $$OPT[j][k] = \max(OPT[j-1][w], w_j + OPT[j-1][k-w_j])$$
+
+With typical imperative languages, we look for shared sub-problems of the
+original knapsack problem, and then we design a path along the solution table
+that maximizes sharing while filling out the answers.
+%
+However, lazy evaluation automatically finds this path if we
+use \lk{Data.Map.Lazy} and setup the solution table with the recurrence
+relation \hzh{We can probably make this code prettier}
+\begin{inlinecode}
+ws, vs :: [Int]
+n,  w  :: Int
+
+solution :: Map (Int, Int) Int
+solution = fromList [ ((j, k),
+                       if (j-1) < 0 || k - ws !! j < 0
+                       then 0
+                       else max (solution ! (j-1, k))
+                                (solution ! (j-1, k - ws !! j) + vs !! j)
+                      )
+                    | j <- [0..2], k <- [0..50] ]
+\end{inlinecode}
+
+Using the lazy variant of \lk{Map} here is critical for the correctness
+of \lk{solution}. If we used \lk{Data.Map.Strict} instead, then \lk{fromList}
+would have eagerly evaluated the \lk{if} expression. The \lk{if} expression
+contains value-level recursion to itself, and this would manifest as an infinite
+loop at runtime. This is an incredibly subtle bug related to laziness.
+
+Unfortunately, reasoning about laziness in Haskell is difficult. Programmers
+often accidentally make a program too lazy or too strict, and as a result, their
+programs behave differently than expected.
 
 \leo{Didn't we have an FRP quote by someone that Laziness was the third source of
 bugs or something? Work that in?}
 \hzh{Ryan Trinkle (author of Reflex) said laziness was the 3rd most difficult thing to
 get right, but let's check with him on whether we can quote him on that.}
 
-For example, consider the following simple Haskell implementation of the \lk{sum} function:
-\leo{I created an environment for this so that we can tweak them all as needed}
-\begin{inlinecode}
-sum = foldl (+) 0
-\end{inlinecode}
-%
-Although this seemingly innocent implementation of sum will produce correct
-results on small lists of numbers, it will quickly run out of memory on larger
-lists. The culprit here is the laziness behavior of \lk{foldl}---it does not
-force the accumulated result during the fold. Instead, calling this \lk{sum} on
-a list produces a thunk that is linear in the size of of the input list, and
-this thunk will not be evaluated until the result of sum is used in another
-computation.
-%
-We can fix this space leak for \lk{sum} using a strict fold, \lk{foldl'}, which
-eagerly forces the accumulator, and avoids creating a space-leaking thunk.
-
-However, using \lk{foldl'} is not sufficient to avoid space leaks in
-general. Consider a single-traversal computation of an average where we keep
-both a running sum and a running counter in an accumulator.
-%
-\hzh{TODO: rewrite this, let bind the foldl}
-\begin{inlinecode}
-avg = uncurry (/) . foldl (\(s,n) x -> (s + x, n + 1)) (0,0)
-\end{inlinecode}
-%
-In this case, both \lk{foldl} and \lk{foldl'} construct thunks linear in the
-size of the input list, since forcing a lazy pair only evaluates it to its weak
-head normal form, and it does not evaluate either component of the pair.
-
-How, then, can we test and catch these laziness bugs before they
-manifest themselves in production? Is it possible to precisely specify
-laziness behavior just as we would for functional correctness?
+How, then, can we test and catch these laziness bugs during development? Is it
+possible to precisely specify laziness behavior just as we would for functional
+correctness?
 %
 In this paper, we demonstrate techniques for observing laziness in Haskell, and
 propose a system of creating specifications of lazy Haskell programs. We
