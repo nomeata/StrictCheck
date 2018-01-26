@@ -104,3 +104,18 @@ Maybe heterogenous list of multi-hole tree zippers?
 Left-recursive fixpoints for continuations
 
 We should try to generalize all the operations in Observe.hs using a single higher-order "fold". One approach is try to use a "functor functor" of king (* -> *) -> *, see the blog post here: https://www.benjamin.pizza/posts/2017-12-15-functor-functors.html
+
+PUT THIS IN THE PAPER:
+
+λ: (x, y) = entangle ()
+λ: x
+()
+λ: y
+E ()
+λ: (x, y) = entangle ()
+λ: y
+T
+λ: x
+()
+λ: y
+T
