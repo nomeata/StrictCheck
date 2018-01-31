@@ -201,9 +201,39 @@ Because LazyCheck was taken.
 \hzh{Maps will mess up memoization if you're overly strict, use knapsack as an example}
 \leo{I want to keep a counter on how many times we'll rewrite this intro :)}
 
-Lazy evaluation brings tremendous power to modularization of functional
-programming ~\cite{WhyFPMatters}. Haskell is one of the most popular programming
-languages that gives its programmers the power of lazy evaluation.
+
+\leo{Point of first paragraph: lazy evaluation is powerful}
+
+Lazy evaluation brings tremendous power to modularization of
+functional programming ~\cite{WhyFPMatters} and is actively used in
+various practical applications. For instance, the big-data framework
+Spark uses laziness to drive computations on demand\cn, Apple's
+programming language Swift leverages it to initialize expensive
+resources as needed\cn, and many functional reactive programming web
+frameworks rely on it\cn \leo{This point might need more exposition
+about frp}. Haskell is the most popular programming language that
+allows programmers to enjoy the power of lazy evaluation by default.
+
+\leo{Point of second paragraph: lazy evaluation is hard}
+
+\leo{I'm sorry in advance for the following sentence. It was just too tempting.}
+\begin{itemize}
+\item Unfortunately, such power comes with great responsibility.\leo{-Ben
+Parker :P}
+\item Reasoning about lazy programs is notoriously hard, because
+it is difficult to predict if and when thunks are evaluated.
+\item Moreover, there is \leo{currently?} no way to specify or check the expected
+laziness behavior of a function.
+\item That would be good.
+\end{itemize}
+
+
+\leo{Example 1: Okasaki queues}
+As a first example of Laziness being both useful and error-prone, we can turn to
+purely functional data structures\cn, and in particular queues.
+\leo{Summarize queue example}
+
+\leo{Example 2: Knapsack}
 
 To demonstrate the benefits of lazy evaluaation, let us consider a dynamic
 programming solution of the knapsack problem in Haskell.
