@@ -189,7 +189,7 @@ Because LazyCheck was taken.
 \section{Introduction}
 \label{sec:intro}
 
-\hzh{Rewrite counter: 2}
+\hzh{Rewrite counter: 4}
 \hzh{Rewrite the intro using different running examples, foldl vs foldr on stream manipulations?}
 \hzh{We can write a hand-crafted spec for take, can we show that we can create this spec by composing the spec for foldr (but not using the one with foldl)}
 \hzh{implement take in 3 ways: foldl, foldr and explicitly as the opening example, and then ask if they're equivalent? (they're not!)}
@@ -204,58 +204,80 @@ Because LazyCheck was taken.
 
 \leo{Point of first paragraph: lazy evaluation is powerful}
 
-Lazy evaluation brings tremendous power to modularization of
-functional programming ~\cite{WhyFPMatters} and is actively used in
-various practical applications. For instance, the big-data framework
-Spark uses laziness to drive computations on demand\cn, Apple's
-programming language Swift leverages it to initialize expensive
-resources as needed\cn, and many functional reactive programming web
-frameworks rely on it\cn \leo{This point might need more exposition
-about frp}. Haskell is the most popular programming language that
-allows programmers to enjoy the power of lazy evaluation by default.
-
-\leo{Point of second paragraph: lazy evaluation is hard}
-
-\leo{I'm sorry in advance for the following sentence. It was just too tempting.}
-\begin{itemize}
-\item Unfortunately, such power comes with great responsibility.\leo{-Ben
-Parker :P}
-\item Reasoning about lazy programs is notoriously hard, because
-it is difficult to predict if and when thunks are evaluated.
-\item Moreover, there is \leo{currently?} no way to specify or check the expected
-laziness behavior of a function.
-\item That would be good.
-\end{itemize}
-
+Lazy evaluation brings tremendous power to functional programming
+~\cite{WhyFPMatters} and is actively used in various practical
+applications. For instance, the big-data framework Spark uses laziness
+to drive computations on demand\cn, Apple's programming language Swift
+leverages it to initialize expensive resources as needed\cn, and many
+functional reactive programming web frameworks rely on it\cn \leo{This
+point might need more exposition about frp}. Haskell is the most
+popular programming language that allows programmers to enjoy the
+power of lazy evaluation by default. Let us consider a few examples
+that demonstrate the power of laziness, and remind us of the
+intricacies of programming with laziness in Haskell.
 
 \leo{Example 1: Okasaki queues}
-As a first example of Laziness being both useful and error-prone, we can turn to
-purely functional data structures\cn, and in particular queues.
-\leo{Summarize queue example}
+
+Purely functional queue is a very popular data structure in
+Haskell. Programmers typically implement such queues with two
+lists---a front list holding the queue elements in FIFO order, and a
+back list holding the other elments in reversed order. When the front
+list is empty, a dequeue operation requires a reversal of the back
+list to refill the front list. These unlucky dequeue operations take
+$O(n)$ time to finish, and are much slower than their imperative
+counterparts.
+
+However, Okasaki designed a very clever purely functional queue using
+lazy lists that both incrementally performs the reversal of the back
+list, and incrementally appends the reversal of the back list onto the
+front list ~\cite{Okasaki95simpleand}. Okasaki's queue relies on the
+following \lk{rotate} function to incrementally reverse and append the
+back list.
+\begin{inlinecode}
+rotate []    back acc = (head back)  : acc
+rotate front back acc = (head front) : rest
+  where rest = rotate (tail front) (tail back) ((head back) : acc)
+\end{inlinecode}
+If we computed the expression \lk{rotate front back []}, its value
+will be equivalent to \lk{front ++ (reverse back)}. However, the
+function \lk{rotate} is much lazier than the naive reverse and append
+operation. The function \lk{reverse} has to evaluate the entire
+structure of the back list, which is not incremental. On the other
+hand, the function \lk{rotate} produces a list immediately, and packs
+the rest of the computation into the lazy list \lk{rest}.
+
+Since \lk{rotate} is functionally equivalent to
+\lk{front ++ (reverse back)}, a programmer could have implemented it naively
+and never discover the mistake through traditional testing! The two
+only differ in their laziness behavior, and there is no way of
+specifying such subtle differences in any testing frameworks today.
 
 \leo{Example 2: Knapsack}
 
-To demonstrate the benefits of lazy evaluaation, let us consider a dynamic
-programming solution of the knapsack problem in Haskell.
-%
-The inputs of the knapsack problem are two sequences of numbers $w_i$ and $v_i$
-where $i = 1, \dots, n$, and each of $w_i$ and $v_i$ specify the weight and the
-value of the $i$th item. The solution presents the maximum value achievable
-using a subset of the items such that their combined weight is under a limit
-$W$.
+Laziness also shines in solutions to dynamic programming problems. Let
+us consider a solution to the famous knapsack problem that levareges
+laziness.
 
-The typical dynamic programming approach for knapsack maintains a table $OPT[][]$,
-where the entry $OPT[j][k]$ keeps the best value achievable using only items
-$1\dots j$ and a weight limit of $k$. The table satisfies the following
-recurrence relation: $$OPT[j][k] = \max(OPT[j-1][w], w_j + OPT[j-1][k-w_j])$$
+The inputs of the knapsack problem are two sequences of numbers $w_i$
+and $v_i$ where $i = 1, \dots, n$, and each of $w_i$ and $v_i$ specify
+the weight and the value of the $i$th item. The solution presents the
+maximum value achievable using a subset of the items such that their
+combined weight is under a limit $W$.
 
-With typical imperative languages, we look for shared sub-problems of the
-original knapsack problem, and then we design a path along the solution table
-that maximizes sharing while filling out the answers.
+The usual dynamic programming approach for knapsack maintains a
+table $OPT[][]$, where the entry $OPT[j][k]$ keeps the best value
+achievable using only items $1\dots j$ and a weight limit of $k$. The
+table satisfies the following recurrence relation: $$OPT[j][k]
+= \max(OPT[j-1][w], w_j + OPT[j-1][k-w_j])$$
+
+To efficiently compute this table using imperative langauges, we look
+for shared sub-problems of the original problem, and design a path
+along the solution table that maximizes sharing while filling out the
+answers.
 %
 However, lazy evaluation automatically finds this path if we
-use \lk{Data.Map.Lazy} and setup the solution table with the recurrence
-relation \hzh{We can probably make this code prettier}
+use \lk{Data.Map.Lazy} and setup the solution table with the
+recurrence relation \hzh{We can probably make this code prettier}
 \begin{inlinecode}
 ws, vs :: [Int]
 n,  w  :: Int
@@ -267,7 +289,7 @@ solution = fromList [ ((j, k),
                        else max (solution ! (j-1, k))
                                 (solution ! (j-1, k - ws !! j) + vs !! j)
                       )
-                    | j <- [0..2], k <- [0..50] ]
+                    | j <- [0..n-1], k <- [0..w] ]
 \end{inlinecode}
 
 Using the lazy variant of \lk{Map} here is critical for the correctness
@@ -276,9 +298,12 @@ would have eagerly evaluated the \lk{if} expression. The \lk{if} expression
 contains value-level recursion to itself, and this would manifest as an infinite
 loop at runtime. This is an incredibly subtle bug related to laziness.
 
-Unfortunately, reasoning about laziness in Haskell is difficult. Programmers
-often accidentally make a program too lazy or too strict, and as a result, their
-programs behave differently than expected.
+As these examples show, the power of laziness puts great
+responsibility on programmers' shoulders. An incorrect implementation
+can either behave functionally the same but with inferior performance,
+or it can completely break down! Reasoning about lazy programs is also
+notoriously hard because predicting when a lazy value gets evaluated
+is difficult.
 
 \leo{Didn't we have an FRP quote by someone that Laziness was the third source of
 bugs or something? Work that in?}
