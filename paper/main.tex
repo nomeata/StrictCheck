@@ -189,48 +189,49 @@ Because LazyCheck was taken.
 \section{Introduction}
 \label{sec:intro}
 
-\hzh{Rewrite counter: 4}
-\hzh{Rewrite the intro using different running examples, foldl vs foldr on stream manipulations?}
-\hzh{We can write a hand-crafted spec for take, can we show that we can create this spec by composing the spec for foldr (but not using the one with foldl)}
-\hzh{implement take in 3 ways: foldl, foldr and explicitly as the opening example, and then ask if they're equivalent? (they're not!)}
+%\hzh{Rewrite the intro using different running examples, foldl vs foldr on stream manipulations?}
+%\hzh{We can write a hand-crafted spec for take, can we show that we can create this spec by composing the spec for foldr (but not using the one with foldl)}
+%\hzh{implement take in 3 ways: foldl, foldr and explicitly as the opening example, and then ask if they're equivalent? (they're not!)}
 \hzh{Okasaki has 2 functions that appends a list to the reversal of another list, one of which is too strict and the other one is just the right amount of lazy (thus incremental)}
 \hzh{The amortized one is hard to specify exactly, but we can introduce approximate specification and specify it approximately}
 \hzh{we need to carefully avoid saying this is a tool for specifying the time complexity of functions}
 \hzh{Implementing functional programs that make clever use of laziness is very easy to get wrong, and we provide a solution to make sure the programmer got it right. We almost have no way of testing it right now before StrictCheck.}
 \hzh{Email Ryan Trinkle and Dan Winograd-Cort about FRP and strictness, and try to use their examples as another problem we can solve in the intro}
 \hzh{Maps will mess up memoization if you're overly strict, use knapsack as an example}
-\leo{I want to keep a counter on how many times we'll rewrite this intro :)}
-
 
 \leo{Point of first paragraph: lazy evaluation is powerful}
 
-Lazy evaluation brings tremendous power to functional programming
+Lazy evaluation gives tremendous power to functional programmers
 ~\cite{WhyFPMatters} and is actively used in various practical
 applications. For instance, the big-data framework Spark uses laziness
 to drive computations on demand\cn, Apple's programming language Swift
 leverages it to initialize expensive resources as needed\cn, and many
-functional reactive programming web frameworks rely on it\cn \leo{This
-point might need more exposition about frp}. Haskell is the most
-popular programming language that allows programmers to enjoy the
-power of lazy evaluation by default. Let us consider a few examples
-that demonstrate the power of laziness, and remind us of the
-intricacies of programming with laziness in Haskell.
+functional reactive programming web frameworks crucially rely on
+it\cn \leo{This point might need more exposition about frp}. Haskell
+is the most popular programming language that allows programmers to
+enjoy the power of lazy evaluation by default. However, that power
+does not come without a price: reasoning about lazy programs is
+notoriously hard. Let us consider two examples that demonstrate the
+power of laziness, as well as the intricacies of programming with it.
 
 \leo{Example 1: Okasaki queues}
 
+\leo{The singular feels weird here. Is it just me?}
 Purely functional queue is a very popular data structure in
 Haskell. Programmers typically implement such queues with two
 lists---a front list holding the queue elements in FIFO order, and a
 back list holding the other elments in reversed order. When the front
 list is empty, a dequeue operation requires a reversal of the back
-list to refill the front list. These unlucky dequeue operations take
+list to refill the front list. These specific dequeue operations take
 $O(n)$ time to finish, and are much slower than their imperative
-counterparts.
+counterparts. This occasional performance degradation is compounded by
+persistence (where the $O(n)$ operation could be repeated many times),
+and can be unacceptable in real-time systems.
 
-However, Okasaki designed a very clever purely functional queue using
-lazy lists that both incrementally performs the reversal of the back
-list, and incrementally appends the reversal of the back list onto the
-front list ~\cite{Okasaki95simpleand}. Okasaki's queue relies on the
+However, Okasaki cleverly improved upon this design using lazy lists
+that both incrementally performs the reversal of the back list, and
+incrementally appends the reversal of the back list onto the front
+list ~\cite{Okasaki95simpleand}. Okasaki's queue relies on the
 following \lk{rotate} function to incrementally reverse and append the
 back list.
 \begin{inlinecode}
@@ -246,11 +247,11 @@ structure of the back list, which is not incremental. On the other
 hand, the function \lk{rotate} produces a list immediately, and packs
 the rest of the computation into the lazy list \lk{rest}.
 
-Since \lk{rotate} is functionally equivalent to
-\lk{front ++ (reverse back)}, a programmer could have implemented it naively
-and never discover the mistake through traditional testing! The two
-only differ in their laziness behavior, and there is no way of
-specifying such subtle differences in any testing frameworks today.
+Since \lk{rotate} is functionally equivalent to \lk{front ++ (reverse
+back)}, a programmer could have implemented it naively and never
+discover the mistake through traditional testing! The two only differ
+in their laziness behavior, and there is no way of specifying such
+subtle differences in any testing frameworks today.
 
 \leo{Example 2: Knapsack}
 
