@@ -235,9 +235,11 @@ list ~\cite{Okasaki95simpleand}. Okasaki's queue relies on the
 following \lk{rotate} function to incrementally reverse and append the
 back list.
 \begin{inlinecode}
-rotate []    back acc = (head back)  : acc
-rotate front back acc = (head front) : rest
-  where rest = rotate (tail front) (tail back) ((head back) : acc)
+rotate :: [a] -> [a] -> [a] -> [a]
+rotate      []       []  as =                       as
+rotate      []  (b : bs) as =     rotate [] bs (b : as)
+rotate (f : fs)      []  as = f : rotate fs []      as
+rotate (f : fs) (b : bs) as = f : rotate fs bs (b : as)
 \end{inlinecode}
 If we computed the expression \lk{rotate front back []}, its value
 will be equivalent to \lk{front ++ (reverse back)}. However, the
