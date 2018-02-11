@@ -3,4 +3,5 @@ People to acknowledge:
 - Matt Parsons
 - Matthew Weaver
 - Jennifer Paykin
+- José Manuel Calderón Trilla
 - Antal Spector-Zabusky (pre-emptively, cause he's going to help with generics but hasn't done so yet)
