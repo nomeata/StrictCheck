@@ -283,7 +283,7 @@ where $i = 1, \dots, n$, and each of $w_i$ and $v_i$ specify the
 weight and the value of the $i$th item. The solution presents the
 maximum value achievable using a subset of the items such that their
 combined weight is under a limit $W$.
-
+%
 The usual dynamic programming approach for knapsack maintains a
 table $OPT[][]$, where the entry $OPT[j][k]$ keeps the best value
 achievable using only items $1\dots j$ and a weight limit of $k$. The
@@ -295,9 +295,9 @@ for shared sub-problems of the original problem, and design a path
 along the solution table that maximizes sharing while filling out the
 answers.
 %
-However, lazy evaluation automatically finds this path if we
-use \lk{Data.Map.Lazy} and setup the solution table with the
-recurrence relation \hzh{We can probably make this code prettier}
+However, lazy evaluation automatically finds this path if we use lazy
+maps to represent the solution table according to the recurrence
+relation \hzh{We can probably make this code prettier}
 \begin{inlinecode}
 ws, vs :: [Int]
 n,  w  :: Int
@@ -312,20 +312,29 @@ solution = fromList [ ((j, k),
                     | j <- [0..n-1], k <- [0..w] ]
 \end{inlinecode}
 
+To query the optimal achievable values from the solution table, we can
+just index into the map. When an entry from the map is looked up at
+the first time, a sequence of evaluations is triggered, and their
+results memoized in the lazy map automatically.
+
 \leo{Is this true? Where would the infinite loop be? there is a bottom to the recursion.
 I thought the problem was that it computes everything when it doesn't need to}
 Using the lazy variant of \lk{Map} here is critical for the correctness
-of \lk{solution}. If we used \lk{Data.Map.Strict} instead, then \lk{fromList}
-would have eagerly evaluated the \lk{if} expression. The \lk{if} expression
-contains value-level recursion to itself, and this would manifest as an infinite
-loop at runtime. This is an incredibly subtle bug related to laziness.
+of \lk{solution}.
+However, using the lazy variant of \lk{Map} here is critical for the
+correctness of \lk{solution}. If we used a map strict in its values
+instead, then \lk{fromList} would have eagerly evaluated the \lk{if}
+expression. The \lk{if} expression contains value-level recursion to
+the solution map itself, and this would manifest as an infinite loop
+at runtime. This is an incredibly subtle bug related to laziness.
 
 As these examples show, the power of laziness puts great
 responsibility on programmers' shoulders. An incorrect implementation
 can either behave functionally the same but with inferior performance,
 or it can completely break down! Reasoning about lazy programs is also
-notoriously hard because predicting when a lazy value gets evaluated
-is difficult.
+notoriously hard --- the programmer needs to have a mental model of the
+order of evaluation of the code, and this order is not always obvious
+from the syntax of the code.
 
 \leo{Didn't we have an FRP quote by someone that Laziness was the third source of
 bugs or something? Work that in?}
@@ -359,6 +368,46 @@ directions for future work in Section~\ref{sec:concl}.
 
 \section{Strictness Specifications, by Example}
 \label{sec:quickchick}
+
+In this section, we will discuss how to specify the laziness behaviors
+of Haskell functions through running examples of purely functional
+maps from integers to integers. The map operations of interest
+are \lk{insert} and \lk{lookup} with the following types:
+\begin{inlinecode}
+insert :: IntMap -> Int -> Int -> IntMap Int
+lookup :: IntMap -> Int        -> Maybe  Int
+\end{inlinecode}
+%
+The \lk{IntMap} can be implemented with a few different laziness
+flavors. We can choose a binary search tree representation for
+efficient lookups, or we can choose an association list representation
+for easy inserts. The binary search tree representation necessarily
+evaluates the keys of the map to order the keys, but it can be lazy in
+the values. On the other hand, the association list representation can
+be lazy in the keys as well. To summarise, we have maps that are
+strict in both keys and values, maps that are strict in keys but lazy
+in values, and maps that are fully lazy in both keys and values.
+
+In Haskell, triggering the evaluation of a lazy function requires
+exerting some demand on its result. Such demands can be pattern
+matches, or further computations that depend on the result. In typical
+Haskell programming, such demands are exerted by the contextual code
+surrounding the result of a lazy function. We will use the
+phrase \textit{demand context} to refer to functions that causes
+evaluation of lazy values.
+
+An evaluation of a lazy data structure can partially explore the lazy
+structure's shape. For example, \lk{lookup} on an association list
+based map evaluates the association list until it finds the first
+matching key. If such a key is halfway inside the association list,
+then the values past this key will not be evaluated in this operation.
+%
+To describe how much of a data structure is evaluated, we will
+use \textit{demand types}. A \textit{demand type} is almost isomorphic
+to the corresponding data type, except we will wrap all the
+constructor arguments in a \lk{Thunk} to represent the possible lack
+of evaluation. For example, consider the \lk{Tree} type and
+its \textit{demand type} \lk{TreeD}.
 
 \leo{Punned names for sections? Or is that just an urns thing? :P }
 
