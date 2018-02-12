@@ -217,16 +217,17 @@ power of laziness, as well as the intricacies of programming with it.
 \leo{Example 1: Okasaki queues}
 
 \leo{The singular feels weird here. Is it just me?}
-Purely functional queue is a very popular data structure in
-Haskell. Programmers typically implement such queues with two
-lists---a front list holding the queue elements in FIFO order, and a
-back list holding the other elments in reversed order. When the front
-list is empty, a dequeue operation requires a reversal of the back
-list to refill the front list. These specific dequeue operations take
-$O(n)$ time to finish, and are much slower than their imperative
-counterparts. This occasional performance degradation is compounded by
-persistence (where the $O(n)$ operation could be repeated many times),
-and can be unacceptable in real-time systems.
+As a first example, consider purely functional queues, a very
+popular data structure in Haskell. Programmers typically implement
+such queues with two lists---a front list holding the queue elements
+in FIFO order, and a back list holding the other elments in reversed
+order. When the front list is empty, a dequeue operation requires a
+reversal of the back list to refill the front list. These specific
+dequeue operations take $O(n)$ time to finish, and are much slower
+than their imperative counterparts. This occasional performance
+degradation is compounded by persistence (where the $O(n)$ operation
+could be repeated many times), and can be unacceptable in real-time
+systems.
 
 However, Okasaki cleverly improved upon this design using lazy lists
 that both incrementally performs the reversal of the back list, and
@@ -255,15 +256,31 @@ discover the mistake through traditional testing! The two only differ
 in their laziness behavior, and there is no way of specifying such
 subtle differences in any testing frameworks today.
 
-\leo{Example 2: Knapsack}
+\leo{Example 2: Maps / Knapsack}
 
-Laziness also shines in solutions to dynamic programming problems. Let
-us consider a solution to the famous knapsack problem that levareges
-laziness.
+For the second example, we turn to a different data functional data
+structure where both a strict and a lazy variant can be situationally
+useful: maps. There are two reasonable laziness behaviors that
+implement a map interface; we could implement a completely strict map,
+or we could lazily evaluate the values stored as needed.
+\footnote{A third option could be to have lazy keys, but they would
+necessarily be forced at every insertion or lookup, with no gain.}
+Haskell's standard library provides these two variants in the form of
+\lk{Data.Map.Strict} and \lk{Data.Map.Lazy}. However, there is no way
+to {\em specify} the difference between the two versions! At best, one
+could hope for a hand-crafted suite of unit tests containing bottoms
+to observe a difference in termination.
+\leo{One thing we could do is ignore the knapsack and expand on the above.}
 
-The inputs of the knapsack problem are two sequences of numbers $w_i$
-and $v_i$ where $i = 1, \dots, n$, and each of $w_i$ and $v_i$ specify
-the weight and the value of the $i$th item. The solution presents the
+Moreover, it is important to be able to distinguish whether such a
+datatype follows to a desired laziness behavior. For instance, the
+standard functional solution for dynamic programming problems
+crucially uses laziness. In particular, consider the famous knapsack
+problem.
+%
+The inputs of the problem are two sequences of numbers $w_i$ and $v_i$
+where $i = 1, \dots, n$, and each of $w_i$ and $v_i$ specify the
+weight and the value of the $i$th item. The solution presents the
 maximum value achievable using a subset of the items such that their
 combined weight is under a limit $W$.
 
@@ -295,6 +312,8 @@ solution = fromList [ ((j, k),
                     | j <- [0..n-1], k <- [0..w] ]
 \end{inlinecode}
 
+\leo{Is this true? Where would the infinite loop be? there is a bottom to the recursion.
+I thought the problem was that it computes everything when it doesn't need to}
 Using the lazy variant of \lk{Map} here is critical for the correctness
 of \lk{solution}. If we used \lk{Data.Map.Strict} instead, then \lk{fromList}
 would have eagerly evaluated the \lk{if} expression. The \lk{if} expression
