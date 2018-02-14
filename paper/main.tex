@@ -1,4 +1,4 @@
-% !!! PLEASE DON'T CHANGE THESE !!! INSTEAD DEFINE YOUR OWN texdirectives.tex !!!
+% !!! Please Don't CHANGE THESE !!! INSTEAD DEFINE YOUR OWN texdirectives.tex !!!
 % These flags are for the final camera ready version for POPL
 % Draft, full version flags
 \newif\ifdraft\drafttrue
@@ -210,9 +210,57 @@ functional reactive programming web frameworks crucially rely on
 it\cn \leo{This point might need more exposition about frp}. Haskell
 is the most popular programming language that allows programmers to
 enjoy the power of lazy evaluation by default. However, that power
-does not come without a price: reasoning about lazy programs is
-notoriously hard. Let us consider two examples that demonstrate the
-power of laziness, as well as the intricacies of programming with it.
+does not come without a price.
+\leo{Didn't we have an FRP quote by someone that Laziness was the third source of
+bugs or something? Work that in?}
+\hzh{Ryan Trinkle (author of Reflex) said laziness was the 3rd most difficult thing to
+get right, but let's check with him on whether we can quote him on that.}
+
+The power of laziness puts great responsibility on programmers'
+shoulders. An incorrect implementation can either behave functionally
+the same but with inferior performance, or it can completely break
+down! Reasoning about lazy programs is also notoriously hard --- the
+programmer needs to have a mental model of the order of evaluation of
+the code, and this order is not always obvious from the syntax of the
+code.
+
+How, then, can we test and catch these laziness bugs during
+development? Is it possible to precisely specify laziness behavior
+just as we would for functional correctness?
+%
+In this paper, we demonstrate techniques for observing laziness in
+Haskell, and propose a system of creating specifications of lazy
+Haskell programs. We implement these ideas as a Haskell library. For
+concreteness, consider the following small example.
+
+\leo{Insert take example here. There is enough space to have both code
+and contributions in this page. yay :) }
+
+In the next section we work through two more examples, functional
+queues and functional maps, demonstrating both the difficulties of
+programming with laziness and how our approach can be used to
+alleviate them.
+%
+In the rest of the paper, we present our technical contributions:
+\begin{itemize}
+\item We introduce a novel approach to specifying the laziness behavior
+of functions that is {\em precise} and {\em compositional}. Such
+specifications are expressive enough to capture exactly how much
+evaluation occurs within a data structure
+%\leo{Also add
+%drawbacks/partiality here? If not here, where in the intro?} \hzh{I'm
+%not sure if we should bring in partiality (in the sense of
+%divergence/nontermination) yet since that seems like a rather
+%technical detail of the spec}
+\item We propose a framework for testing against such specifications.
+\item We improve upon the random function generators from QuickCheck to generate functions with arbitrary laziness behaviors.
+\item We demonstrate non-trivial generic programming techniques to apply StrictCheck to almost all data types.
+\end{itemize}
+%
+Section~\ref{sec:related} discusses related work. We conclude and draw
+directions for future work in Section~\ref{sec:concl}.
+
+\leo{These examples should go in the next section. Putting them here to avoid conflicts with Hengchu}
 
 \leo{Example 1: Okasaki queues}
 
@@ -328,43 +376,6 @@ expression. The \lk{if} expression contains value-level recursion to
 the solution map itself, and this would manifest as an infinite loop
 at runtime. This is an incredibly subtle bug related to laziness.
 
-As these examples show, the power of laziness puts great
-responsibility on programmers' shoulders. An incorrect implementation
-can either behave functionally the same but with inferior performance,
-or it can completely break down! Reasoning about lazy programs is also
-notoriously hard --- the programmer needs to have a mental model of the
-order of evaluation of the code, and this order is not always obvious
-from the syntax of the code.
-
-\leo{Didn't we have an FRP quote by someone that Laziness was the third source of
-bugs or something? Work that in?}
-\hzh{Ryan Trinkle (author of Reflex) said laziness was the 3rd most difficult thing to
-get right, but let's check with him on whether we can quote him on that.}
-
-How, then, can we test and catch these laziness bugs during development? Is it
-possible to precisely specify laziness behavior just as we would for functional
-correctness?
-%
-In this paper, we demonstrate techniques for observing laziness in Haskell, and
-propose a system of creating specifications of lazy Haskell programs. We
-implement these ideas as a Haskell library.
-
-Our technical contributions are as follows:
-\begin{itemize}
-\item We introduce a novel approach to specifying the laziness behavior of functions that is
-{\em precise} \hzh{and compositional}. Such specifications are
-expressive enough to capture exactly how much evaluation occurs within
-a data structure \leo{Also add drawbacks/partiality here? If not here,
-where in the intro?} \hzh{I'm not sure if we should bring in
-partiality (in the sense of divergence/nontermination) yet since that
-seems like a rather technical detail of the spec}
-\item We propose a framework for testing against such specifications.
-\item We improve upon the random function generators from QuickCheck to generate functions with arbitrary laziness behaviors.
-\item We demonstrate non-trivial generic programming techniques to apply StrictCheck to almost all data types.
-\end{itemize}
-%
-Section~\ref{sec:related} discusses related work. We conclude and draw
-directions for future work in Section~\ref{sec:concl}.
 
 \section{Strictness Specifications, by Example}
 \label{sec:quickchick}
