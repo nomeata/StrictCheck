@@ -25,6 +25,8 @@
 \usepackage{xspace}
 \usepackage{preamble}
 \usepackage{relsize}
+\usepackage{float}
+\usepackage{cleveref}
 %\usepackage{mathpartir}
 
 \makeatletter\if@ACM@journal\makeatother
@@ -382,8 +384,8 @@ at runtime. This is an incredibly subtle bug related to laziness.
 
 In this section, we will discuss how to specify the laziness behaviors
 of Haskell functions through running examples of purely functional
-maps from integers to integers. The map operations of interest
-are \lk{insert} and \lk{lookup} with the following types:
+maps. The map operations of interest are \lk{insert} and \lk{lookup}
+with the following types:
 \begin{inlinecode}
 insert :: IntMap -> Int -> Int -> IntMap Int
 lookup :: IntMap -> Int        -> Maybe  Int
@@ -393,11 +395,13 @@ The \lk{IntMap} can be implemented with a few different laziness
 flavors. We can choose a binary search tree representation for
 efficient lookups, or we can choose an association list representation
 for easy inserts. The binary search tree representation necessarily
-evaluates the keys of the map to order the keys, but it can be lazy in
-the values. On the other hand, the association list representation can
-be lazy in the keys as well. To summarise, we have maps that are
-strict in both keys and values, maps that are strict in keys but lazy
-in values, and maps that are fully lazy in both keys and values.
+evaluates the keys of the map to order the keys, but it has flexible
+laziness behavior on the values of the map. On the other hand, the
+association list representation is even more flexible since it can be
+lazy in the keys as well. To summarise, we have maps that are strict
+in both keys and values, maps that are strict in keys but lazy or
+strict in values, and maps that are fully lazy in both keys and
+values.
 
 In Haskell, triggering the evaluation of a lazy function requires
 exerting some demand on its result. Such demands can be pattern
@@ -411,14 +415,53 @@ An evaluation of a lazy data structure can partially explore the lazy
 structure's shape. For example, \lk{lookup} on an association list
 based map evaluates the association list until it finds the first
 matching key. If such a key is halfway inside the association list,
-then the values past this key will not be evaluated in this operation.
+then the map entries past this key will not be evaluated.
 %
 To describe how much of a data structure is evaluated, we will
 use \textit{demand types}. A \textit{demand type} is almost isomorphic
 to the corresponding data type, except we will wrap all the
 constructor arguments in a \lk{Thunk} to represent the possible lack
-of evaluation. For example, consider the \lk{Tree} type and
-its \textit{demand type} \lk{TreeD}.
+of evaluation. For example, let the binary tree representation of maps
+be the \lk{Tree} type and let us consider its \textit{demand
+type} \lk{TreeD}.
+\begin{inlinecode}
+data Tree =              data TreeD =
+  | Leaf                   | LeafD
+  | Node Tree Int Tree     | NodeD (Thunk TreeD) (Thunk IntD) (Thunk TreeD)
+\end{inlinecode}
+%
+Values of \lk{TreeD} type describe a shape of values in the \lk{Tree}
+type, and values of \lk{Thunk} describe any prefix shape of a given
+tree since it has the following definition:
+\begin{inlinecode}
+data Thunk a = E !a | T
+\end{inlinecode}
+%
+The \lk{E} constructor stands for \textit{evaluated} and the \lk{T}
+constructor stand for \textit{thunk}. In \Cref{fig:tree-treeD}, the
+value \lk{treeShape} matches an evaluation that only demands the root
+of \lk{tree} and the value in its left branch.
+
+\begin{figure}[H]
+\begin{minipage}{0.4\textwidth}
+\begin{inlinecode}
+tree = Node
+         Node Leaf 1 Leaf
+         2
+         Node Leaf 3 Leaf
+\end{inlinecode}
+\end{minipage}
+\begin{minipage}{0.4\textwidth}
+\begin{inlinecode}
+treeShape = NodeD
+              E (NodeD T (E 1) T)
+              E 2
+              T
+\end{inlinecode}
+\end{minipage}
+\caption{Example of tree shape}
+\label{fig:tree-treeD}
+\end{figure}
 
 \leo{Punned names for sections? Or is that just an urns thing? :P }
 
