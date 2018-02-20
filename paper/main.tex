@@ -381,7 +381,7 @@ at runtime. This is an incredibly subtle bug related to laziness.
 
 \section{Strictness Specifications, by Example}
 \label{sec:quickchick}
-
+\iffalse
 In this section, we will discuss how to specify the laziness behaviors
 of Haskell functions through running examples of purely functional
 maps. The map operations of interest are \lk{insert} and \lk{lookup}
@@ -421,47 +421,64 @@ To describe how much of a data structure is evaluated, we will
 use \textit{demand types}. A \textit{demand type} is almost isomorphic
 to the corresponding data type, except we will wrap all the
 constructor arguments in a \lk{Thunk} to represent the possible lack
-of evaluation. For example, let the binary tree representation of maps
-be the \lk{Tree} type and let us consider its \textit{demand
-type} \lk{TreeD}.
-\begin{inlinecode}
-data Tree =              data TreeD =
-  | Leaf                   | LeafD
-  | Node Tree Int Tree     | NodeD (Thunk TreeD) (Thunk IntD) (Thunk TreeD)
-\end{inlinecode}
+of evaluation.
 %
-Values of \lk{TreeD} type describe a shape of values in the \lk{Tree}
-type, and values of \lk{Thunk} describe any prefix shape of a given
-tree since it has the following definition:
-\begin{inlinecode}
-data Thunk a = E !a | T
-\end{inlinecode}
+Concretely, here are the 3 types of maps of interest
+in \Cref{fig:map-types}.
 %
-The \lk{E} constructor stands for \textit{evaluated} and the \lk{T}
-constructor stand for \textit{thunk}. In \Cref{fig:tree-treeD}, the
-value \lk{treeShape} matches an evaluation that only demands the root
-of \lk{tree} and the value in its left branch.
-
 \begin{figure}[H]
-\begin{minipage}{0.4\textwidth}
+\centering
 \begin{inlinecode}
-tree = Node
-         Node Leaf 1 Leaf
-         2
-         Node Leaf 3 Leaf
+data LazyMap   = Leaf
+               | Node LazyMap Key Value LazyMap
+
+data StrictMap = SLeaf
+               | SNode StrictMap Key !Value StrictMap
+
+data ListMap   = Nil
+               | Cons Key Value ListMap
 \end{inlinecode}
-\end{minipage}
-\begin{minipage}{0.4\textwidth}
-\begin{inlinecode}
-treeShape = NodeD
-              E (NodeD T (E 1) T)
-              E 2
-              T
-\end{inlinecode}
-\end{minipage}
-\caption{Example of tree shape}
-\label{fig:tree-treeD}
+\caption{3 types of maps with different laziness}
+\label{fig:map-types}
 \end{figure}
+%
+The \textit{demand types} of the 3 kinds of maps and the \lk{Thunk}
+type are defined in \Cref{fig:map-demand-types}. We will use the
+Haskell list-of-pairs syntax when referring to maps of
+type \lk{ListMap}.
+%
+\begin{figure}[H]
+\centering
+\begin{inlinecode}
+data Thunk a    = E !a
+                | T
+
+data LazyMapD   = LeafD
+                | NodeD (Thunk LazyMapD)
+                        (Thunk KeyD)
+                        (Thunk ValueD)
+                        (Thunk LazyMapD)
+
+data StrictMapD = SLeafD
+                | SNodeD (Thunk StrictMapD)
+                         (Thunk KeyD)
+                         ValueD
+                         (Thunk StrictMapD)
+
+data ListMapD   = NilD
+                | ConsD (Thunk KeyD)
+                        (Thunk ValueD)
+                        (Thunk ListMapD)
+\end{inlinecode}
+\caption{Demand types}
+\label{fig:map-demand-types}
+\end{figure}
+%
+The \lk{E} constructor stands for \textit{evaluated}, and the \lk{T}
+constructor stands for \textit{thunk}. Using the 3 \textit{demand
+types}, we can describe the shape of a demand exerted onto the
+maps. Take the example list map \lk{[(1, 1), (2, 2), (3, 3)]}.
+\fi
 
 \leo{Punned names for sections? Or is that just an urns thing? :P }
 
