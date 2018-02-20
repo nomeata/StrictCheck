@@ -266,45 +266,6 @@ directions for future work in Section~\ref{sec:concl}.
 
 \leo{Example 1: Okasaki queues}
 
-\leo{The singular feels weird here. Is it just me?}
-As a first example, consider purely functional queues, a very
-popular data structure in Haskell. Programmers typically implement
-such queues with two lists---a front list holding the queue elements
-in FIFO order, and a back list holding the other elments in reversed
-order. When the front list is empty, a dequeue operation requires a
-reversal of the back list to refill the front list. These specific
-dequeue operations take $O(n)$ time to finish, and are much slower
-than their imperative counterparts. This occasional performance
-degradation is compounded by persistence (where the $O(n)$ operation
-could be repeated many times), and can be unacceptable in real-time
-systems.
-
-However, Okasaki cleverly improved upon this design using lazy lists
-that both incrementally performs the reversal of the back list, and
-incrementally appends the reversal of the back list onto the front
-list ~\cite{Okasaki95simpleand}. Okasaki's queue relies on the
-following \lk{rotate} function to incrementally reverse and append the
-back list.
-\begin{inlinecode}
-rotate :: [a] -> [a] -> [a] -> [a]
-rotate      []       []  as =                       as
-rotate      []  (b : bs) as =     rotate [] bs (b : as)
-rotate (f : fs)      []  as = f : rotate fs []      as
-rotate (f : fs) (b : bs) as = f : rotate fs bs (b : as)
-\end{inlinecode}
-If we computed the expression \lk{rotate front back []}, its value
-will be equivalent to \lk{front ++ (reverse back)}. However, the
-function \lk{rotate} is much lazier than the naive reverse and append
-operation. The function \lk{reverse} has to evaluate the entire
-structure of the back list, which is not incremental. On the other
-hand, the function \lk{rotate} produces a list immediately, and packs
-the rest of the computation into the lazy list \lk{rest}.
-
-Since \lk{rotate} is functionally equivalent to \lk{front ++ (reverse
-back)}, a programmer could have implemented it naively and never
-discover the mistake through traditional testing! The two only differ
-in their laziness behavior, and there is no way of specifying such
-subtle differences in any testing frameworks today.
 
 \leo{Example 2: Maps / Knapsack}
 
@@ -381,104 +342,135 @@ at runtime. This is an incredibly subtle bug related to laziness.
 
 \section{Strictness Specifications, by Example}
 \label{sec:quickchick}
-\iffalse
-In this section, we will discuss how to specify the laziness behaviors
-of Haskell functions through running examples of purely functional
-maps. The map operations of interest are \lk{insert} and \lk{lookup}
-with the following types:
+
+As a first example, consider purely functional queues, a very
+popular data structure in Haskell. Programmers typically implement
+such queues with two lists---a front list holding the queue elements
+in FIFO order, and a back list holding the other elments in reversed
+order. When the front list is empty, a dequeue operation requires a
+reversal of the back list to refill the front list. These specific
+dequeue operations take $O(n)$ time to finish, and are much slower
+than their imperative counterparts. This occasional performance
+degradation is compounded by persistence where the $O(n)$ operation
+could be repeated many times, and can be unacceptable in real-time
+systems.
+
+However, Okasaki cleverly improved upon this design using lazy lists
+that both incrementally performs the reversal of the back list, and
+incrementally appends the reversal of the back list onto the front
+list ~\cite{Okasaki95simpleand}. Okasaki's queue relies on the
+following \lk{rotate} function to incrementally reverse and append the
+back list.
 \begin{inlinecode}
-insert :: IntMap -> Int -> Int -> IntMap Int
-lookup :: IntMap -> Int        -> Maybe  Int
+rotate :: [a] -> [a] -> [a] -> [a]
+rotate      []       []  as =                       as
+rotate      []  (b : bs) as =     rotate [] bs (b : as)
+rotate (f : fs)      []  as = f : rotate fs []      as
+rotate (f : fs) (b : bs) as = f : rotate fs bs (b : as)
 \end{inlinecode}
-%
-The \lk{IntMap} can be implemented with a few different laziness
-flavors. We can choose a binary search tree representation for
-efficient lookups, or we can choose an association list representation
-for easy inserts. The binary search tree representation necessarily
-evaluates the keys of the map to order the keys, but it has flexible
-laziness behavior on the values of the map. On the other hand, the
-association list representation is even more flexible since it can be
-lazy in the keys as well. To summarise, we have maps that are strict
-in both keys and values, maps that are strict in keys but lazy or
-strict in values, and maps that are fully lazy in both keys and
-values.
+If we computed the expression \lk{rotate front back []}, its value
+will be equivalent to \lk{front ++ (reverse back)}. However, the
+function \lk{rotate} is much lazier than the naive reverse and append
+operation. The function \lk{reverse} has to evaluate the entire
+structure of the back list, which is not incremental. On the other
+hand, the function \lk{rotate} produces a list immediately, and packs
+the rest of the computation into the lazy list \lk{rest}.
 
-In Haskell, triggering the evaluation of a lazy function requires
-exerting some demand on its result. Such demands can be pattern
-matches, or further computations that depend on the result. In typical
-Haskell programming, such demands are exerted by the contextual code
-surrounding the result of a lazy function. We will use the
-phrase \textit{demand context} to refer to functions that causes
-evaluation of lazy values.
+Since \lk{rotate} is functionally equivalent to \lk{front ++ (reverse
+back)}, a programmer could have implemented it naively and never
+discover the mistake through traditional testing! The two only differ
+in their laziness behavior. Fortunately, we can use StrictCheck to
+write a specification that makes this property of \lk{rotate}
+testable.
 
-An evaluation of a lazy data structure can partially explore the lazy
-structure's shape. For example, \lk{lookup} on an association list
-based map evaluates the association list until it finds the first
-matching key. If such a key is halfway inside the association list,
-then the map entries past this key will not be evaluated.
-%
-To describe how much of a data structure is evaluated, we will
-use \textit{demand types}. A \textit{demand type} is almost isomorphic
-to the corresponding data type, except we will wrap all the
-constructor arguments in a \lk{Thunk} to represent the possible lack
-of evaluation.
-%
-Concretely, here are the 3 types of maps of interest
-in \Cref{fig:map-types}.
+To describe the laziness behavior, we need to first introduce a few
+types that describe how lists are used. We use the
+term \textit{demand} to refer to the shape of such usage. Concretely,
+a \textit{demand} is a shape that describes the used part of a data
+structure. For lists, \textit{demands} will be prefixes of lists. We
+use the type \lk{ListD} to represent such demands (\Cref{fig:ListD}).
 %
 \begin{figure}[H]
 \centering
 \begin{inlinecode}
-data LazyMap   = Leaf
-               | Node LazyMap Key Value LazyMap
-
-data StrictMap = SLeaf
-               | SNode StrictMap Key !Value StrictMap
-
-data ListMap   = Nil
-               | Cons Key Value ListMap
+data ListD a = NilD
+             | ConsD (Thunk a) (Thunk (ListD a))
 \end{inlinecode}
-\caption{3 types of maps with different laziness}
-\label{fig:map-types}
+\caption{\lk{ListD} type}
+\label{fig:ListD}
 \end{figure}
 %
-The \textit{demand types} of the 3 kinds of maps and the \lk{Thunk}
-type are defined in \Cref{fig:map-demand-types}. We will use the
-Haskell list-of-pairs syntax when referring to maps of
-type \lk{ListMap}.
+The \lk{Thunk} type used in \lk{ListD} has 2 constructors: \lk{E}
+for \textit{evaluated} and a nullary constructor \lk{T}
+for \textit{thunk}. In \lk{ListD}, \lk{Thunk} wraps around all the
+list constructor fields, and this allows us to represent lack of
+further evaluation by using the \lk{T} constructor
+from \lk{Thunk}. For example, given the list \lk{[1, 2, 3]}, the
+value \lk{ConsD T (ConsD T T)} represents the \textit{demand} that
+reveals the first 2 \lk{Cons} constructors of the list, but does not
+evaluate any other parts of the list. To improve readability of demand
+values, we will also use the syntax \lk{[\_, \_, ...]} where
+appropriate.
+
+In Haskell, to trigger the evaluation of a lazy function, we need to
+exert some \textit{demand} on the result of that function. This
+suggests a natural flow for the specification of a lazy function ---
+given the demand on the output, the specification should calculate the
+demands on the input. However, this is not enough in general because
+the demand on the input could depend on the value of the inputs as
+well. The \lk{take} function introduced in \Cref{sec:intro} is such a
+case since the length of the output from \lk{take} depends on its
+integer argument.
+
+Putting these pieces together, we arrive at an appropriate type for
+the specification of \lk{rotate}: \lk{ListD a -> [a] -> [a] -> [a] ->
+(ListD a, ListD a, ListD a)}.
 %
+\hzh{The description here needs improvement}
+To specify the laziness behavior of \lk{rotate}, we need to inspect
+the 4 different cases of \lk{rotate}. When both \lk{fs} and \lk{bs}
+are empty, the accumulator is returned directly; when \lk{fs} is an
+empty list, \lk{rotate} immediately recurses on the tail of \lk{bs};
+when \lk{bs} is empty, \lk{rotate} produces a new list with the
+original head of \lk{fs} as the new head, and the tail of that list is
+the result of a recursion; finally, when both \lk{fs} and \lk{bs} are
+not empty, \lk{rotate} also immediately produces a new list with the
+appropriate head, and conses \hzh{is this a word} the original head
+of \lk{bs} onto the accumulator.
+
+Turning our intuition above into a Haskell function, we complete the
+specification of \lk{rotate} in \Cref{fig:rotate-spec}
 \begin{figure}[H]
 \centering
 \begin{inlinecode}
-data Thunk a    = E !a
-                | T
-
-data LazyMapD   = LeafD
-                | NodeD (Thunk LazyMapD)
-                        (Thunk KeyD)
-                        (Thunk ValueD)
-                        (Thunk LazyMapD)
-
-data StrictMapD = SLeafD
-                | SNodeD (Thunk StrictMapD)
-                         (Thunk KeyD)
-                         ValueD
-                         (Thunk StrictMapD)
-
-data ListMapD   = NilD
-                | ConsD (Thunk KeyD)
-                        (Thunk ValueD)
-                        (Thunk ListMapD)
+rotate_spec :: ListD a
+            -> [a] -> [a] -> [a]
+            -> (Thunk (ListD a), Thunk (ListD a), Thunk (ListD a))
+rotate_spec NilD                     fs bs as = (E NilD, E NilD, E NilD)
+rotate_spec dOut@(ConsD dElem dTail) fs bs as =
+  case (fs, bs) of
+    ([],           []) ->
+      (E NilD, E NilD, E dOut)
+    ([],      b : bs') ->
+      let (_, dBs', dBAs) = rotate_spec dTail [] bs' (b:as)
+      in case dBAs of
+           T                -> (E NilD, T, T)
+           E (ConsD dB dAs) -> (E NilD, ConsD dB dBs', dAs)
+           E NilD           -> error ``Impossible''
+    (_ : fs',      []) ->
+      let (dFs', _, dAs) = rotate_spec dTail fs' [] as
+      in  (E (ConsD dElem dFs'), E NilD, dAs)
+    (_ : fs', b : bs') ->
+      let (dFs', dBs', dBAs) = rotate_spec dTail as' bs' (b:as)
+          dFs                = E (ConsD dElem dFs')
+      in case dBAs of
+           T                -> (dFs, T, T)
+           E (ConsD dB dAs) -> (dFs, E (ConsD dB dBs'), dAs)
+           E NilD           -> error ``Impossible''
 \end{inlinecode}
-\caption{Demand types}
-\label{fig:map-demand-types}
+\caption{Specification for \lk{rotate}}
+\label{fig:rotate-spec}
 \end{figure}
-%
-The \lk{E} constructor stands for \textit{evaluated}, and the \lk{T}
-constructor stands for \textit{thunk}. Using the 3 \textit{demand
-types}, we can describe the shape of a demand exerted onto the
-maps. Take the example list map \lk{[(1, 1), (2, 2), (3, 3)]}.
-\fi
 
 \leo{Punned names for sections? Or is that just an urns thing? :P }
 
