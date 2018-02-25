@@ -262,82 +262,7 @@ evaluation occurs within a data structure
 Section~\ref{sec:related} discusses related work. We conclude and draw
 directions for future work in Section~\ref{sec:concl}.
 
-\leo{These examples should go in the next section. Putting them here to avoid conflicts with Hengchu}
 
-\leo{Example 1: Okasaki queues}
-
-
-\leo{Example 2: Maps / Knapsack}
-
-For the second example, we turn to a different data functional data
-structure where both a strict and a lazy variant can be situationally
-useful: maps. There are two reasonable laziness behaviors that
-implement a map interface; we could implement a completely strict map,
-or we could lazily evaluate the values stored as needed.
-\footnote{A third option could be to have lazy keys, but they would
-necessarily be forced at every insertion or lookup, with no gain.}
-Haskell's standard library provides these two variants in the form of
-\lk{Data.Map.Strict} and \lk{Data.Map.Lazy}. However, there is no way
-to {\em specify} the difference between the two versions! At best, one
-could hope for a hand-crafted suite of unit tests containing bottoms
-to observe a difference in termination.
-\leo{One thing we could do is ignore the knapsack and expand on the above.}
-
-Moreover, it is important to be able to distinguish whether such a
-datatype follows to a desired laziness behavior. For instance, the
-standard functional solution for dynamic programming problems
-crucially uses laziness. In particular, consider the famous knapsack
-problem.
-%
-The inputs of the problem are two sequences of numbers $w_i$ and $v_i$
-where $i = 1, \dots, n$, and each of $w_i$ and $v_i$ specify the
-weight and the value of the $i$th item. The solution presents the
-maximum value achievable using a subset of the items such that their
-combined weight is under a limit $W$.
-%
-The usual dynamic programming approach for knapsack maintains a
-table $OPT[][]$, where the entry $OPT[j][k]$ keeps the best value
-achievable using only items $1\dots j$ and a weight limit of $k$. The
-table satisfies the following recurrence relation: $$OPT[j][k]
-= \max(OPT[j-1][w], w_j + OPT[j-1][k-w_j])$$
-
-To efficiently compute this table using imperative langauges, we look
-for shared sub-problems of the original problem, and design a path
-along the solution table that maximizes sharing while filling out the
-answers.
-%
-However, lazy evaluation automatically finds this path if we use lazy
-maps to represent the solution table according to the recurrence
-relation \hzh{We can probably make this code prettier}
-\begin{inlinecode}
-ws, vs :: [Int]
-n,  w  :: Int
-
-solution :: Map (Int, Int) Int
-solution = fromList [ ((j, k),
-                       if (j-1) < 0 || k - ws !! j < 0
-                       then 0
-                       else max (solution ! (j-1, k))
-                                (solution ! (j-1, k - ws !! j) + vs !! j)
-                      )
-                    | j <- [0..n-1], k <- [0..w] ]
-\end{inlinecode}
-
-To query the optimal achievable values from the solution table, we can
-just index into the map. When an entry from the map is looked up at
-the first time, a sequence of evaluations is triggered, and their
-results memoized in the lazy map automatically.
-
-\leo{Is this true? Where would the infinite loop be? there is a bottom to the recursion.
-I thought the problem was that it computes everything when it doesn't need to}
-Using the lazy variant of \lk{Map} here is critical for the correctness
-of \lk{solution}.
-However, using the lazy variant of \lk{Map} here is critical for the
-correctness of \lk{solution}. If we used a map strict in its values
-instead, then \lk{fromList} would have eagerly evaluated the \lk{if}
-expression. The \lk{if} expression contains value-level recursion to
-the solution map itself, and this would manifest as an infinite loop
-at runtime. This is an incredibly subtle bug related to laziness.
 
 
 \section{Strictness Specifications, by Example}
@@ -409,7 +334,7 @@ from \lk{Thunk}. For example, given the list \lk{[1, 2, 3]}, the
 value \lk{ConsD T (ConsD T T)} represents the \textit{demand} that
 reveals the first 2 \lk{Cons} constructors of the list, but does not
 evaluate any other parts of the list. To improve readability of demand
-values, we will also use the syntax \lk{[\_, \_, ...]} where
+values, we will also use the syntax \lk{\_ : \_ : \_} where
 appropriate.
 
 In Haskell, to trigger the evaluation of a lazy function, we need to
@@ -427,49 +352,122 @@ the specification of \lk{rotate}: \lk{ListD a -> [a] -> [a] -> [a] ->
 (ListD a, ListD a, ListD a)}.
 %
 \hzh{The description here needs improvement}
-To specify the laziness behavior of \lk{rotate}, we need to inspect
-the 4 different cases of \lk{rotate}. When both \lk{fs} and \lk{bs}
-are empty, the accumulator is returned directly; when \lk{fs} is an
-empty list, \lk{rotate} immediately recurses on the tail of \lk{bs};
-when \lk{bs} is empty, \lk{rotate} produces a new list with the
-original head of \lk{fs} as the new head, and the tail of that list is
-the result of a recursion; finally, when both \lk{fs} and \lk{bs} are
-not empty, \lk{rotate} also immediately produces a new list with the
-appropriate head, and conses \hzh{is this a word} the original head
-of \lk{bs} onto the accumulator.
+To specify the laziness behavior of \lk{rotate}, we return to Okasaki's insight:
+as long as the front list is longer than the back list, demanding the first
+element from the result of \lk{rotate} only causes evaluation of the first
+element of the front list ~\cite{Okasaki95simpleand}. Using this precondition
+for \lk{rotate}, we arrive at the following executable
+specification \lk{rotate\_spec}.
 
 Turning our intuition above into a Haskell function, we complete the
 specification of \lk{rotate} in \Cref{fig:rotate-spec}
 \begin{figure}[H]
 \centering
+\hzh{TODO}
 \begin{inlinecode}
-rotate_spec :: ListD a
-            -> [a] -> [a] -> [a]
-            -> (Thunk (ListD a), Thunk (ListD a), Thunk (ListD a))
-rotate_spec NilD                     fs bs as = (E NilD, E NilD, E NilD)
-rotate_spec dOut@(ConsD dElem dTail) fs bs as =
-  case (fs, bs) of
-    ([],           []) ->
-      (E NilD, E NilD, E dOut)
-    ([],      b : bs') ->
-      let (_, dBs', dBAs) = rotate_spec dTail [] bs' (b:as)
-      in case dBAs of
-           T                -> (E NilD, T, T)
-           E (ConsD dB dAs) -> (E NilD, ConsD dB dBs', dAs)
-           E NilD           -> error ``Impossible''
-    (_ : fs',      []) ->
-      let (dFs', _, dAs) = rotate_spec dTail fs' [] as
-      in  (E (ConsD dElem dFs'), E NilD, dAs)
-    (_ : fs', b : bs') ->
-      let (dFs', dBs', dBAs) = rotate_spec dTail as' bs' (b:as)
-          dFs                = E (ConsD dElem dFs')
-      in case dBAs of
-           T                -> (dFs, T, T)
-           E (ConsD dB dAs) -> (dFs, E (ConsD dB dBs'), dAs)
-           E NilD           -> error ``Impossible''
+TODO: rewrite this spec so it looks like the invariant in Okasaki's paper.
 \end{inlinecode}
 \caption{Specification for \lk{rotate}}
 \label{fig:rotate-spec}
+\end{figure}
+
+\lk{rotate\_spec} exactly captures the core idea from Okasaki's \lk{rotate}
+operation, and testing the reverse and append implementation against this
+specification immediately produces a counter example. \hzh{should we show what a
+counter example looks like?}
+
+\leo{Example 2: Maps / Knapsack}
+
+For the second example, we turn to a different functional data structure where
+both a strict and a lazy variant can be situationally useful: maps. There are
+two reasonable laziness behaviors that implement a map interface; we could
+implement a completely strict map, or we could lazily evaluate the values stored
+as needed.
+\footnote{A third option could be to have lazy keys, but they would
+necessarily be forced at every insertion or lookup, with no gain.}
+Haskell's standard library provides these two variants in the form of
+\lk{Data.Map.Strict} and \lk{Data.Map.Lazy}. However, there is no way
+to {\em specify} the difference between the two versions! At best, one
+could hope for a hand-crafted suite of unit tests containing bottoms
+to observe a difference in termination.
+\leo{One thing we could do is ignore the knapsack and expand on the above.}
+
+Moreover, it is important to be able to distinguish whether such a datatype
+follows a desired laziness behavior. For instance, the standard functional
+solution for dynamic programming problems crucially uses laziness \hzh{is this
+solution really standard? Is there some work we can cite to establish this
+approach as the canonical approach for dynamic programming in functional
+programming?}. In particular, consider the famous knapsack problem.
+%
+The inputs of the problem are two sequences of numbers $w_i$ and $v_i$
+where $i = 1, \dots, n$, and each of $w_i$ and $v_i$ specify the
+weight and the value of the $i$th item. The solution presents the
+maximum value achievable using a subset of the items such that their
+combined weight is under a limit $W$.
+%
+The usual dynamic programming approach for knapsack maintains a
+table $OPT[][]$, where the entry $OPT[j][k]$ keeps the best value
+achievable using only items $1\dots j$ and a weight limit of $k$. The
+table satisfies the following recurrence relation: $$OPT[j][k]
+= \max(OPT[j-1][w], w_j + OPT[j-1][k-w_j])$$
+
+To efficiently compute this table using imperative langauges, we look
+for shared sub-problems of the original problem, and design a path
+along the solution table that maximizes sharing while filling out the
+answers.
+%
+However, lazy evaluation automatically finds this path if we use lazy
+maps to represent the solution table according to the recurrence
+relation \hzh{We can probably make this code prettier}
+\begin{inlinecode}
+ws, vs :: [Int]
+n,  w  :: Int
+
+solutionPre :: Map (Int, Int) Int -> Map (Int, Int) Int
+solutionPre soln = fromList [ ((j, k),
+                               if (j-1) < 0 || k - ws !! j < 0
+                               then if ws !! j <= k then vs !! j else 0
+                               else max (soln ! (j-1, k))
+                                        (soln ! (j-1, k - ws !! j) + vs !! j)
+                              )
+                            | j <- [0..2], k <- [0..50] ]
+
+solution :: Map (Int, Int) Int
+solution = fix solutionPre
+\end{inlinecode}
+
+To query the optimal achievable values from the solution table, we can
+just index into the map. When an entry from the map is looked up at
+the first time, a sequence of evaluations is triggered, and their
+results memoized in the lazy map automatically.
+
+However, using the lazy variant of \lk{Map} here is critical for the
+correctness of \lk{solution}. If we used a map strict in its values
+instead, then \lk{fromList} would have eagerly evaluated the \lk{if}
+expression. The \lk{if} expression contains value-level recursion to
+the solution map itself, and this would manifest as an infinite loop
+at runtime. This is an incredibly subtle bug related to laziness.
+
+To catch this behavior through testing, we can write another specification that
+captures this correctness condition. The well-foundedness \hzh{is this a word?}
+of \lk{solution} depends on what is evaluated when the value at key \lk{(j, k)}
+of the map is demanded. Let $\lk{solutionPre}_n$ be the $n$-times iterated
+pre-fixpoint \lk{solutionPre . solutionPre . ... . solutionPre}, then if we
+demand the value at \lk{(j, k)} from the result of $\lk{solutionPre}_n$, its
+input map should not be evaluated at the \lk{(j, k)} entry since otherwise
+evaluating the value at \lk{(j, k)} becomes an infinite loop at the fixpoint.
+
+We can write another executable specification for this property
+of $\lk{solutionPre}_n$ (\Cref{fig:spec-map}). Testing the implementation based on
+strict maps also immediately produces a counter example.
+
+\begin{figure}[H]
+\centering
+\hzh{TODO: specification for map}
+\begin{inlinecode}
+\end{inlinecode}
+\caption{Specification for \lk{solutionPre}}
+\label{fig:spec-map}
 \end{figure}
 
 \leo{Punned names for sections? Or is that just an urns thing? :P }
@@ -478,7 +476,8 @@ rotate_spec dOut@(ConsD dElem dTail) fs bs as =
 \item In this section we will showcase our proposed specification language \leo{It's not a language tho}
 \item while introducing the running example of our paper: maps.
 \item Maps are particularly well-suited for a discussion of laziness because of the interesting different
-possible behaviors: strict-maps, value-lazy maps \leo{Point out Data.Map.Strict vs Data.Map}, and fully lazy maps
+possible behaviors: strict-maps, value-lazy maps \leo{Point out Data.Map.Strict
+vs Data.Map}, and fully lazy maps
 \item For simplicity, we will use binary search trees as maps, assuming the keys are integers and forego balancing
 as the added complexity is irrelevant to the laziness discussion. \leo{Can we claim it wouldn't matter at all? I think so}
 \end{itemize}
