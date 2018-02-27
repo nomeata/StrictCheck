@@ -268,38 +268,38 @@ directions for future work in Section~\ref{sec:concl}.
 \section{Strictness Specifications, by Example}
 \label{sec:quickchick}
 
-As a first example, consider purely functional queues, a very
-popular data structure in Haskell. Programmers typically implement
-such queues with two lists---a front list holding the queue elements
-in FIFO order, and a back list holding the other elments in reversed
-order. When the front list is empty, a dequeue operation requires a
-reversal of the back list to refill the front list. These specific
-dequeue operations take $O(n)$ time to finish, and are much slower
-than their imperative counterparts. This occasional performance
-degradation is compounded by persistence where the $O(n)$ operation
-could be repeated many times, and can be unacceptable in real-time
-systems.
+For our first example, we turn to a very popular data structure:
+purely functional queues.  Such queues are typically implemented with
+two lists---a front list holding the queue elements in FIFO order, and
+a back list holding the other elments in reversed order. When the
+front list is empty, a dequeue operation must reverse the back list to
+refill the front list. These specific dequeue operations take $O(n)$
+time to finish and are much slower than their imperative
+counterparts, a performance degradation only compounded by
+persistence---where the $O(n)$ operation could be repeated many times,
+and unacceptable for many real-time systems.
 
-However, Okasaki cleverly improved upon this design using lazy lists
-that both incrementally performs the reversal of the back list, and
+Amongst his work on purely functional data structures\cite{Okasaki},
+Okasaki cleverly improved upon this design using lazy lists that both
+incrementally performs the reversal of the back list, and
 incrementally appends the reversal of the back list onto the front
 list ~\cite{Okasaki95simpleand}. Okasaki's queue relies on the
 following \lk{rotate} function to incrementally reverse and append the
 back list.
 \begin{inlinecode}
-rotate :: [a] -> [a] -> [a] -> [a]
-rotate      []       []  as =                       as
-rotate      []  (b : bs) as =     rotate [] bs (b : as)
-rotate (f : fs)      []  as = f : rotate fs []      as
-rotate (f : fs) (b : bs) as = f : rotate fs bs (b : as)
+  rotate :: [a] -> [a] -> [a] -> [a]
+  rotate      []       []  as =                       as
+  rotate      []  (b : bs) as =     rotate [] bs (b : as)
+  rotate (f : fs)      []  as = f : rotate fs []      as
+  rotate (f : fs) (b : bs) as = f : rotate fs bs (b : as)
 \end{inlinecode}
 If we computed the expression \lk{rotate front back []}, its value
-will be equivalent to \lk{front ++ (reverse back)}. However, the
-function \lk{rotate} is much lazier than the naive reverse and append
-operation. The function \lk{reverse} has to evaluate the entire
-structure of the back list, which is not incremental. On the other
-hand, the function \lk{rotate} produces a list immediately, and packs
-the rest of the computation into the lazy list \lk{rest}.
+will be equivalent to \lk{front ++ (reverse back)}. However, unlike
+the naive reverse-and-append operation, \lk{rotate} is much
+lazier. A \lk{reverse} function has to evaluate the entire structure
+of the back list, which is not incremental. On the other
+hand, \lk{rotate} produces a list immediately, and packs the rest of
+the computation into the lazy list \lk{rest}.
 
 Since \lk{rotate} is functionally equivalent to \lk{front ++ (reverse
 back)}, a programmer could have implemented it naively and never
@@ -314,28 +314,29 @@ term \textit{demand} to refer to the shape of such usage. Concretely,
 a \textit{demand} is a shape that describes the used part of a data
 structure. For lists, \textit{demands} will be prefixes of lists. We
 use the type \lk{ListD} to represent such demands (\Cref{fig:ListD}).
+\leo{Why is this a figure and not just inline? Especially if we're inlining
+the figure!}
 %
 \begin{figure}[H]
 \centering
 \begin{inlinecode}
-data ListD a = NilD
-             | ConsD (Thunk a) (Thunk (ListD a))
+  data ListD a = NilD
+               | ConsD (Thunk a) (Thunk (ListD a))
 \end{inlinecode}
 \caption{\lk{ListD} type}
 \label{fig:ListD}
 \end{figure}
 %
 The \lk{Thunk} type used in \lk{ListD} has 2 constructors: \lk{E}
-for \textit{evaluated} and a nullary constructor \lk{T}
+for \textit{evaluated} and \lk{T}, a nullary constructor,
 for \textit{thunk}. In \lk{ListD}, \lk{Thunk} wraps around all the
 list constructor fields, and this allows us to represent lack of
-further evaluation by using the \lk{T} constructor
-from \lk{Thunk}. For example, given the list \lk{[1, 2, 3]}, the
-value \lk{ConsD T (ConsD T T)} represents the \textit{demand} that
-reveals the first 2 \lk{Cons} constructors of the list, but does not
-evaluate any other parts of the list. To improve readability of demand
-values, we will also use the syntax \lk{\_ : \_ : \_} where
-appropriate.
+further evaluation by using the \lk{T} constructor. For example,
+given the list \lk{[1, 2, 3]}, the value \lk{ConsD T (ConsD T T)}
+represents the \textit{demand} that reveals the first 2 \lk{Cons}
+constructors of the list, but does not evaluate any other parts of the
+list. To improve readability of demand values, we will also use the
+syntax \lk{\_ : \_ : \_} where appropriate.
 
 In Haskell, to trigger the evaluation of a lazy function, we need to
 exert some \textit{demand} on the result of that function. This
@@ -374,7 +375,7 @@ TODO: rewrite this spec so it looks like the invariant in Okasaki's paper.
 \lk{rotate\_spec} exactly captures the core idea from Okasaki's \lk{rotate}
 operation, and testing the reverse and append implementation against this
 specification immediately produces a counter example. \hzh{should we show what a
-counter example looks like?}
+counter example looks like?}\leo{Definitely!}
 
 \leo{Example 2: Maps / Knapsack}
 
