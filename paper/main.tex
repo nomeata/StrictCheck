@@ -475,12 +475,35 @@ demand the value at \lk{(j, k)} from the result of $\lk{solutionStep}_n$, its
 input map should not be evaluated at the \lk{(j, k)} entry since otherwise
 evaluating the value at \lk{(j, k)} becomes an infinite loop at the fixpoint.
 
-We can write another executable specification for this property
-of $\lk{solutionStep}_n$. Testing the implementation based on
-strict maps also immediately produces a counter example.
+We can write another executable specification for this property of
+$\lk{solutionStep}_n$. To describe the concrete \textit{demand} on
+maps, we need to first give a data type definition for \lk{Map}. We
+choose a simple binary search tree representation here. We also define
+a \lk{lookupD} function \hzh{we should probably move this to the
+appendix} to lookup demand at a given key.
 %
 \begin{inlinecode}
-TODO: expectation-spec for solutionStep
+data Map  k v = Bin (Map k v) k v (Map k v)
+              | Empty
+
+data MapD k v = BinD (Thunk (MapD k v)) (Thunk k) (Thunk v) (Thunk (MapD k v))
+              | EmptyD
+
+lookupD :: k -> MapD k v -> Thunk v
+lookupD k EmptyD                          = T
+lookupD k (BinD _ T      _ _)             = T
+lookupD k (BinD l (E k') v r) | k == k'   = v
+                              | k <= k'   = recur l
+                              | otherwise = recur r
+  where recur (E demand) = lookupD k demand
+        recur T          = T
+\end{inlinecode}
+%
+Now, we can write an executable specification
+for \lk{solutionStep}. \hzh{TODO: write the spec with
+strictCheckWithResults, and show a counterexample}
+%
+\begin{inlinecode}
 \end{inlinecode}
 %
 
@@ -496,17 +519,13 @@ vs Data.Map}, and fully lazy maps
 as the added complexity is irrelevant to the laziness discussion. \leo{Can we claim it wouldn't matter at all? I think so}
 \end{itemize}
 
-\paragraph*{Binary Search Trees}
+\section{Demand Types and Specification}
+\label{sec:demand-types-and-spec}
+\hzh{In this section, we should explain how demand types and specification work in general. We don't actually have to define a ListD/TreeD for every type out there. There is also a generic pattern for the type of a specification given the type of a function. We should also talk about the non-exact versions of specifications, and how they work}
 
-\leo{data structures - code - short explanation}
-
-\paragraph*{Characterizing Laziness}
-
-\begin{itemize}
-\item Specification of laziness - TreeD data structure \leo{Mention how it will be generically derived}
-\item Strict / Spine-strict maps
-\item Fully lazy map as a between spec
-\end{itemize}
+\section{Generating lazy functions}
+\label{sec:gen-lazy-fun}
+\hzh{In this section, we should talk about how lazy functions are generated, and why QuickCheck's implementation doesn't generate lazy functions.}
 
 \section{Evaluation}
 \label{sec:eval}
