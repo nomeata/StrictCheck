@@ -202,6 +202,7 @@ Because LazyCheck was taken.
 \hzh{Maps will mess up memoization if you're overly strict, use knapsack as an example}
 
 \leo{Point of first paragraph: lazy evaluation is powerful}
+\caleb{What does the word ``power'' mean? It's non-specific. Useful? Convenient?}
 
 Lazy evaluation gives tremendous power to functional programmers
 ~\cite{WhyFPMatters} and is actively used in various practical
@@ -218,10 +219,11 @@ bugs or something? Work that in?}
 \hzh{Ryan Trinkle (author of Reflex) said laziness was the 3rd most difficult thing to
 get right, but let's check with him on whether we can quote him on that.}
 
+\caleb{Again, power and responsibility are not completely clear, but I do like the narrative}
 The power of laziness puts great responsibility on programmers'
 shoulders. An incorrect implementation can either behave functionally
-the same but with inferior performance, or it can completely break
-down! Reasoning about lazy programs is also notoriously hard --- the
+the same but with inferior \caleb{Inferior than what?} performance, or it can completely break
+down!\caleb{unclear. loops?} Reasoning about lazy programs is also notoriously hard --- the
 programmer needs to have a mental model of the order of evaluation of
 the code, and this order is not always obvious from the syntax of the
 code.
@@ -236,7 +238,7 @@ Haskell programs. We implement these ideas as a Haskell library. For
 concreteness, consider the following small example.
 
 \leo{Insert take example here. There is enough space to have both code
-and contributions in this page. yay :) }
+and contributions in this page. yay :) }\caleb{YES!}
 
 In the next section we work through two more examples, functional
 queues and functional maps, demonstrating both the difficulties of
@@ -254,9 +256,10 @@ evaluation occurs within a data structure
 %not sure if we should bring in partiality (in the sense of
 %divergence/nontermination) yet since that seems like a rather
 %technical detail of the spec}
-\item We propose a framework for testing against such specifications.
-\item We improve upon the random function generators from QuickCheck to generate functions with arbitrary laziness behaviors.
-\item We demonstrate non-trivial generic programming techniques to apply StrictCheck to almost all data types.
+\item We propose a framework for testing against such specifications.\caleb{Automated testing? Can be more specific}
+\item We improve upon the random function generators from QuickCheck\cn to generate functions with arbitrary laziness behaviors.
+\item We demonstrate non-trivial generic programming techniques to apply StrictCheck to almost all data types.\caleb{I don't know
+the meaning of non-trivial and almost-all}
 \end{itemize}
 %
 Section~\ref{sec:related} discusses related work. We conclude and draw
