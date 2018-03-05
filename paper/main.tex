@@ -204,15 +204,15 @@ Because LazyCheck was taken.
 \leo{Point of first paragraph: lazy evaluation is powerful}
 \caleb{What does the word ``power'' mean? It's non-specific. Useful? Convenient?}
 
-Lazy evaluation gives tremendous  to functional programmers
+Lazy evaluation gives tremendous power to functional programmers
 ~\cite{WhyFPMatters} and is actively used in various practical
 applications. For instance, the big-data framework Spark uses laziness
 to drive computations on demand\cn, Apple's programming language Swift
 leverages it to initialize expensive resources as needed\cn, and many
-functional reactive programming web frameworks crucially rely on
-it\cn \leo{This point might need more exposition about frp}. Haskell
+functional reactive programming web frameworks rely on
+it crucially\cn \leo{This point might need more exposition about frp}. Haskell
 is the most popular programming language that allows programmers to
-enjoy the power of lazy evaluation by default. However, that power
+enjoy the power of lazy evaluation by default. However, it
 does not come without a price.
 \leo{Didn't we have an FRP quote by someone that Laziness was the third source of
 bugs or something? Work that in?}
@@ -221,22 +221,23 @@ get right, but let's check with him on whether we can quote him on that.}
 
 \caleb{Again, power and responsibility are not completely clear, but I do like the narrative}
 The power of laziness puts great responsibility on programmers'
-shoulders. An incorrect implementation can either behave functionally
-the same but with inferior \caleb{Inferior than what?} performance, or it can completely break
-down!\caleb{unclear. loops?} Reasoning about lazy programs is also notoriously hard --- the
-programmer needs to have a mental model of the order of evaluation of
-the code, and this order is not always obvious from the syntax of the
-code.
+shoulders. An implementation that uses laziness incorrectly can either
+behave functionally the same but with inferior \caleb{Inferior than
+what?} performance---compared to a strict counterpart, or it can
+completely break down!\caleb{unclear. loops?} Reasoning about lazy
+programs is also notoriously hard --- the programmer needs to have a
+mental model of the order of evaluation of the code, and this order is
+not always obvious from the syntax of the code.
 
-How, then, can we test and catch these laziness bugs during
+How, then, can we test and catch such laziness bugs during
 development? Is it possible to precisely specify laziness behavior
 just as we would for functional correctness?
 %
 In this paper, we demonstrate techniques for observing laziness in
 Haskell, and propose a system of creating specifications of lazy
 Haskell programs. We implement these ideas as a Haskell library. For
-concreteness, consider the following small example on the
-function \lk{take}, which accepts an integer $n$ and a list, and returns
+concreteness, consider the following example using the standard
+\lk{take} function on lists, which accepts an integer $n$ and a list, and returns
 a prefix of the list with length $n$. If $n$ is larger than the length
 of the original list, then the entire list is returned.
 %
@@ -271,10 +272,9 @@ evaluation occurs within a data structure
 %not sure if we should bring in partiality (in the sense of
 %divergence/nontermination) yet since that seems like a rather
 %technical detail of the spec}
-\item We propose a framework for automated testing against such specifications.\caleb{Automated testing? Can be more specific}
+\item We propose a framework for automated testing against such specifications.\caleb{Automated testing? Can be more specific}\leo{Should we mention QuickCheck here?}
 \item We improve upon the random function generators from QuickCheck\cn to generate functions with arbitrary laziness behaviors.
-\item We discuss our generic programming-based impementation to apply StrictCheck to all algebraic data types.\caleb{I don't know
-the meaning of non-trivial and almost-all}
+\item We discuss our generic programming-based impementation to apply StrictCheck to all algebraic data types.\leo{I guess ``packed'' maps do not qualified as algebraic?}
 \end{itemize}
 %
 Section~\ref{sec:related} discusses related work. We conclude and draw
@@ -282,6 +282,9 @@ directions for future work in Section~\ref{sec:concl}.
 
 \section{Strictness Specifications, by Example}
 \label{sec:quickchick}
+
+\subsection{Purely functional queues}
+\label{sec:queues}
 
 For our first example, we turn to a very popular data structure:
 purely functional queues.  Such queues are typically implemented with
@@ -370,7 +373,8 @@ for \lk{rotate}, we arrive at the following executable
 specification \lk{rotate\_spec}.
 
 Turning our intuition above into a Haskell function, we complete the
-specification of \lk{rotate} in \Cref{fig:rotate-spec}
+specification of \lk{rotate} in \Cref{fig:rotate-spec}.
+%
 \begin{figure}[H]
 \centering
 \hzh{TODO}
@@ -380,11 +384,13 @@ TODO: rewrite this spec so it looks like the invariant in Okasaki's paper.
 \caption{Specification for \lk{rotate}}
 \label{fig:rotate-spec}
 \end{figure}
-
-\lk{rotate\_spec} exactly captures the core idea from Okasaki's \lk{rotate}
+%
+The \lk{rotate\_spec} exactly captures the core idea from Okasaki's \lk{rotate}
 operation, and testing the reverse and append implementation against this
 specification immediately produces a counter example. \hzh{should we show what a
 counter example looks like?}\leo{Definitely!}
+
+\subsection{Key- vs value-strict maps}
 
 \leo{Example 2: Maps / Knapsack}
 
@@ -401,6 +407,8 @@ to {\em specify} the difference between the two versions! At best, one
 could hope for a hand-crafted suite of unit tests containing divergent
 terms to observe a difference in termination.
 \leo{One thing we could do is ignore the knapsack and expand on the above.}
+\leo{Here we need a similar discussion as with lists}
+
 
 Moreover, it is important to be able to distinguish whether such a datatype
 follows a desired laziness behavior. For instance, the standard functional
