@@ -523,9 +523,63 @@ as the added complexity is irrelevant to the laziness discussion. \leo{Can we cl
 \label{sec:demand-types-and-spec}
 \hzh{In this section, we should explain how demand types and specification work in general. We don't actually have to define a ListD/TreeD for every type out there. There is also a generic pattern for the type of a specification given the type of a function. We should also talk about the non-exact versions of specifications, and how they work}
 
+There is a general pattern between a type \lk{a} and
+its \textit{demand type}, for which we will write \lk{Demand a} from
+now on. In both the example on lists and the example on maps,
+a \lk{Thunk} type constructor is placed around all of the constructor
+arguments to the original type. The \lk{Thunk} type has the following
+definition:
+\begin{inlinecode}
+data Thunk a = E !a | T
+\end{inlinecode}
+Its two constructors \lk{E} and \lk{T} represents an evaluated
+fragment of the original data, and unexplored regions of the original
+data, respectively.
+
+This design is motivated by the runtime representation of Haskell
+values. Boxed values in Haskell are indirectly represented by a
+pointer, and the pointer can lead to either a constructor with
+pointers to deeper parts of the value, or a piece of unevaluated code,
+which will produce a fragment of the value when evaluated. This piece
+of code is also know as a thunk.
+
+The \lk{Thunk} type reifies \hzh{there is a slight caveat here though,
+we don't really capture sharing with this representation} the runtime
+representation into a Haskell value. Programmers can then inspect
+these demand values within Haskell. Most importantly, the demand types
+form the vocabulary of specifications on laziness.
+
+A \textit{specification} in StrictCheck is a function that computes
+demand values. When we talk about Haskell function's laziness
+informally, we often refer to these functions as ``strict'' or
+``lazy'' in its arguments. There is a lot of information we can unpack
+from such phrases --- how strict the function is in its arguments, the
+dependency of the strictness on the argument values, and the
+relationship between demand on inputs with demand on the output.
+
+StrictCheck specifications allows programmers to convey these
+information accurately. A specification takes a demand on the output,
+all of the inputs to the specified function, and computes a demand on
+all the inputs. For example, the specification of the \lk{take}
+function will have type \lk{Demand [a] -> Int -> [a] -> (Demand Int,
+Demand [a])}.
+
+\hzh{I want to say something about why we chose this design, but I'm not
+actually sure why...}
+
+The translation between a data type to its demand type and between a
+function type to its specification type are mechanic, and although we
+have presented them in a way that involves creating new demand type
+definitions, our implementation handles all of this automatically
+through generic programming. We delay this discussion
+to \Cref{sec:generic-programming}.
+
 \section{Generating lazy functions}
 \label{sec:gen-lazy-fun}
 \hzh{In this section, we should talk about how lazy functions are generated, and why QuickCheck's implementation doesn't generate lazy functions.}
+
+\section{Generic Programming}
+\label{sec:generic-programming}
 
 \section{Evaluation}
 \label{sec:eval}
