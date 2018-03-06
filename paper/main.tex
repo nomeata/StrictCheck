@@ -245,13 +245,7 @@ of the original list, then the entire list is returned.
 take_spec :: Shaped a => Spec '[Int, [a]] [a]
 take_spec =
   Spec $ \predict d n xs ->
-    predict (nf n) (if n > length xs then E d else endThunk d)
-  where
-    endThunk :: PosDemand [a] -> Demand [a]
-    endThunk = \case
-      Nil'        -> T
-      dx :% T     -> E (dx :% T)
-      dx :% E dxs -> E (dx :% endThunk dxs)
+    predict n (if n > length xs then d else d ++ thunk)
 \end{inlinecode}
 %
 \hzh{TODO: describe what this spec means in English}
@@ -281,7 +275,7 @@ Section~\ref{sec:related} discusses related work. We conclude and draw
 directions for future work in Section~\ref{sec:concl}.
 
 \section{Strictness Specifications, by Example}
-\label{sec:quickchick}
+\label{sec:examples}
 
 \subsection{Purely functional queues}
 \label{sec:queues}
@@ -543,19 +537,19 @@ data Thunk a = E !a | T
 Its two constructors \lk{E} and \lk{T} represents an evaluated
 fragment of the original data, and unexplored regions of the original
 data, respectively.
-
+%
 This design is motivated by the runtime representation of Haskell
 values. Boxed values in Haskell are indirectly represented by a
-pointer, and the pointer can lead to either a constructor with
+pointer, and the pointer can lead to either a constructor bundled with
 pointers to deeper parts of the value, or a piece of unevaluated code,
-which will produce a fragment of the value when evaluated. This piece
+which will produce a fragment of the value upon execution. This piece
 of code is also know as a thunk.
 
 The \lk{Thunk} type reifies \hzh{there is a slight caveat here though,
 we don't really capture sharing with this representation} the runtime
 representation into a Haskell value. Programmers can then inspect
 these demand values within Haskell. Most importantly, the demand types
-form the vocabulary of specifications on laziness.
+form a critical part of specifications on laziness.
 
 A \textit{specification} in StrictCheck is a function that computes
 demand values. When we talk about Haskell function's laziness
@@ -565,21 +559,48 @@ from such phrases --- how strict the function is in its arguments, the
 dependency of the strictness on the argument values, and the
 relationship between demand on inputs with demand on the output.
 
-StrictCheck specifications allows programmers to convey these
-information accurately. A specification takes a demand on the output,
-all of the inputs to the specified function, and computes a demand on
-all the inputs. For example, the specification of the \lk{take}
-function will have type \lk{Demand [a] -> Int -> [a] -> (Demand Int,
-Demand [a])}.
+StrictCheck specifications allows programmers to convey this
+information accurately. In StrictCheck, specifications are represented
+by the \lk{Spec} type constructor. The \lk{Spec} type constructor
+takes two type arguments: the first is a type-level list holding the
+types of arguments to specified function, and the second is the type
+of the output of specified function. For example, consider the
+function \lk{take :: Int -> [a] -> [a]}, one possible type of its
+specification is \lk{Spec '[Int, [a]] [a]}.
 
-\hzh{I want to say something about why we chose this design, but I'm not
-actually sure why...}
+In general, specification types are not unique for the same
+function. Again consider \lk{take}, we can certainly choose the
+specification type \lk{Spec '[Int] ([a] -> [a])} as well. However, the
+meaning of this specification is very different from the other
+choice. A specification of this type predicts how the \lk{Int}
+argument is used given a demand on the partially-applied \lk{take}
+function, and this specification does not produce information on how
+the lists are used at all.
+
+StrictCheck specifications apply to higher-order functions, and are
+compositional. Take the example of \lk{map :: (a -> b) -> [a] -> [b]},
+the type of its specification is \lk{Spec '[a] b -> Spec '[[a]] [b]},
+a function from specifications to specifications. This allows
+programmers to apply the specification of \lk{map} to any
+specification of the function argument to \lk{map}, and conveniently
+synthesize a specification based on that of \lk{map}.
+
+The \lk{Spec} type also has a single constructor with the same
+name. This constructor takes a higher-order function in
+continuation-passing-style ~\cn, where the first argument to the
+function is a framework-supplied function that takes the predicted
+demand on the inputs. We will always name this argument \lk{predict}
+in this paper. The function is CPS'd to hide some internal plumbing
+that presents a variadic interface to the user, so that the number of
+arguments to \lk{predict} always matches the length of the type-level
+list in \lk{Spec}.
 
 The translation between a data type to its demand type and between a
 function type to its specification type are mechanic, and although we
 have presented them in a way that involves creating new demand type
-definitions, our implementation handles all of this automatically
-through generic programming. We delay this discussion
+definitions in \Cref{sec:examples}, our implementation handles this
+transition automatically through generic programming. We delay
+discussion of this implementation detail
 to \Cref{sec:generic-programming}.
 
 \section{Generating lazy functions}
