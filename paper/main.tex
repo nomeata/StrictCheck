@@ -248,7 +248,14 @@ take_spec =
     predict n (if n > length xs then d else d ++ thunk)
 \end{inlinecode}
 %
-\hzh{TODO: describe what this spec means in English}
+The \lk{Spec} constructor takes a function, whose first
+argument \lk{predict} is the predicted demand on the \lk{Int} argument
+of \lk{take}, and second argument the predicted demand on the \lk{[a]}
+argument. This spec simply says that the \lk{Int} argument will always
+be used, and the demand on the list argument is either the same as the
+demand on the output, or demand on the output plus some
+unevaluated \lk{thunk} at the end. The former case happens when $n$ is
+larger than the list's length, otherwise the latter case applies.
 
 In the next section we work through two more examples, functional
 queues and functional maps, demonstrating both the difficulties of
@@ -341,8 +348,10 @@ the list \lk{[1, 2, 3]}, the value \lk{ConsD T (ConsD T T)} represents
 the \textit{demand} that reveals the first 2 \lk{Cons} constructors of
 the list, but does not evaluate any other parts of the list. To
 improve readability of demand values, we will also use the
-syntax \lk{\_ : \_ : \_} where appropriate, the underscore $\lk{\_}$
-represents a thunk.
+syntax \lk{\_ : \_ : \_} instead of explicit demand type values. In
+this expression, the first two underscores represent unevaluated
+elements in the list, while the last underscore represents unevaluated
+tail of the list.
 
 In Haskell, to trigger the evaluation of a lazy function, we need to
 exert some demand on the result of that function. This suggests a
@@ -351,38 +360,44 @@ demand on the output, the specification should calculate the demands
 on the input. However, this is not enough in general because the
 demand on the input could depend on the \textit{value} of the inputs
 as well. The \lk{take} function introduced in \Cref{sec:intro} is such
-a case since the length of the output from \lk{take} depends on its
-integer argument.
+a case.
 
-Putting these pieces together, we arrive at an appropriate type for
-the specification of \lk{rotate}: \lk{ListD a -> [a] -> [a] -> [a] ->
-(ListD a, ListD a, ListD a)}.
+Putting these pieces together, we can specify the laziness behavior
+of \lk{rotate} with Okasaki's insight: as long as the front list is
+longer than the back list, demanding the first element from the result
+of \lk{rotate} only causes evaluation of the first element of the
+front list ~\cite{Okasaki95simpleand}. Since \lk{rotate} is always
+used by supplying the empty list \lk{[]} as the accumulator argument,
+we define \lk{rot fs bs = rotate fs bs []}, and show a specification
+of \lk{rot}.
 %
-\hzh{The description here needs improvement}
-To specify the laziness behavior of \lk{rotate}, we return to Okasaki's insight:
-as long as the front list is longer than the back list, demanding the first
-element from the result of \lk{rotate} only causes evaluation of the first
-element of the front list ~\cite{Okasaki95simpleand}. Using this precondition
-for \lk{rotate}, we arrive at the following executable
-specification \lk{rotate\_spec}.
-
-Turning our intuition above into a Haskell function, we complete the
-specification of \lk{rotate} in \Cref{fig:rotate-spec}.
-%
-\begin{figure}[H]
-\centering
-\hzh{TODO}
 \begin{inlinecode}
-TODO: rewrite this spec so it looks like the invariant in Okasaki's paper.
+rot_spec :: Shaped a => Spec '[[a], [a]] [a]
+rot_spec =
+  Spec $ \predict d fs bs ->
+    let (fs', bs') = splitAt (length fs) (cap d)
+        spineLen  = length (cap (d ++ [undefined]))  -- # of spine thunks forced
+        overflow  = spineLen       > length fs  -- begun taking from bs?
+        overrot   = length (cap d) > length bs  -- forced all of bs?
+        padLength =
+          length bs `min`
+            if overflow
+            then length bs - length bs'
+            else length (cap d)
+        spinePad = replicate padLength thunk
+    in predict
+         (                    fs' ++ if overflow            then [] else thunk)
+         (spinePad ++ reverse bs' ++ if overflow || overrot then [] else thunk)
 \end{inlinecode}
-\caption{Specification for \lk{rotate}}
-\label{fig:rotate-spec}
-\end{figure}
 %
 The \lk{rotate\_spec} exactly captures the core idea from Okasaki's \lk{rotate}
 operation, and testing the reverse and append implementation against this
-specification immediately produces a counter example. \hzh{should we show what a
-counter example looks like?}\leo{Definitely!}
+specification immediately produces a counter example.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{revappend_counterexample}
+\caption{Counterexample for \lk{revAppend} under \lk{rot\_spec}}
+\end{figure}
 
 \subsection{Key- vs value-strict maps}
 
