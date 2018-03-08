@@ -546,6 +546,8 @@ solution table was accessed.
 
 \section{Demand Types and Specification}
 \label{sec:demand-types-and-spec}
+
+\subsection{Types}
 There is a general pattern between a type \lk{a} and
 its \textit{demand type}, for which we will write \lk{Demand a} from
 now on. In both the example on lists and the example on maps,
@@ -631,6 +633,46 @@ in this evidence type, so programmers can choose to output any useful
 information for debugging. These specifications are spiritually
 similar to properties in QuickCheck
 ~\cite{Claessen:2000:QLT:357766.351266}.
+
+\subsection{Bridging ad-hoc laziness testing with StrictCheck}
+In Haskell development, programmers often inserts divergent terms such
+as \lk{error} or \lk{undefined} into the inputs of a function to test
+its laziness. If a function evaluates such a divergent term, execution
+gets aborted. We will call these divergent terms ``bottoms'' following
+the common terminology in literature.
+
+This is a very convenient approach to laziness testing because
+programmers can use functions on these partial data containing bottoms
+as if they are total values. As long as such functions don't require
+the bottom values at runtime, execution continues. However, this
+process typically involves repeated manual process of --- inserting
+bottoms, executing the function, and diagnosing.
+
+StrictCheck bridges the gap between this approach of laziness testing
+and property-based laziness testing by supplying the two
+functions \lk{fromDemand :: Demand a -> a} and \lk{toDemand :: a ->
+Demand a}. Intuitively, \lk{fromDemand} produces a partial data
+containing bottoms given a value of its demand type. This is performed
+by re-assembing a value of type \lk{a} using the shaped described by
+its demand value, and using a special bottom value at all locations
+where a \lk{Thunk} appears in its demand value.
+
+We implemented this process with a special exception, which is a kind
+of bottom value, that cannot be thrown nor caught by users of
+StrictCheck since its type is hidden. This allows \lk{toDemand} to
+determine the precise locations of such bottoms, and convert them back
+to the \lk{Thunk} value of type \lk{Demand a}.
+
+In fact, in all of the 3 examples presented, we have written
+specifications in this style instead of explicit manipulations of
+type \lk{Demand a}. This gives us the full arsenal of existing API on
+data types involved in the specification, and when runtime safety is
+required, we simply convert these partial values back to demand
+values.
+
+Since StrictCheck can generate random demands on values, programmers
+can eliminate the manual process inserting bottoms, and focus on the
+diagnosis phase of the usual debug loop.
 
 \section{Generating lazy functions}
 \label{sec:gen-lazy-fun}
