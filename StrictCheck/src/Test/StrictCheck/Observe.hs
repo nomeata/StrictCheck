@@ -57,6 +57,35 @@ pattern E a = Wrap (Eval a)
 pattern T :: Demand a
 pattern T = Wrap Thunk
 
+thunk :: forall a. a
+thunk = throw Unevaluated
+
+isThunk :: Shaped a => a -> Bool
+isThunk a =
+  case toDemand a of
+    T -> True
+    _ -> False
+
+-- TODO: Do not export Unevaluated's constructor
+data Unevaluated = Unevaluated deriving Show
+instance Exception Unevaluated
+
+toDemand :: Shaped a => a -> Demand a
+toDemand = interleave toThunk
+  where
+    toThunk :: a -> Thunk a
+    toThunk a = unsafePerformIO $
+      (Eval <$> Exception.evaluate a)
+      `catch`
+      (\(_ :: Unevaluated) -> return Thunk)
+
+fromDemand :: Shaped a => Demand a -> a
+fromDemand = fuse fromThunk
+  where
+    fromThunk :: Thunk a -> a
+    fromThunk (Eval a) = a
+    fromThunk Thunk    = throw Unevaluated
+
 
 ------------------------------------------------------
 -- Observing demand behavior of arbitrary functions --
