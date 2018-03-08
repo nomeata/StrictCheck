@@ -496,50 +496,56 @@ We can write another executable specification for this property of
 $\lk{solutionStep}_n$. To describe the concrete \textit{demand} on
 maps, we need to first give a data type definition for \lk{Map}. We
 choose a simple binary search tree representation here. We also define
-a \lk{lookupD} function \hzh{we should probably move this to the
-appendix} to lookup demand at a given key.
+a function \lk{iterSolution} that performs $n$ iterations
+of \lk{solutionStep}, and indexes into the map at a given key. The
+specification is written for \lk{iterSolution}.
 %
 \begin{inlinecode}
 data Map  k v = Bin (Map k v) k v (Map k v)
               | Empty
 
-data MapD k v = BinD (Thunk (MapD k v)) (Thunk k) (Thunk v) (Thunk (MapD k v))
-              | EmptyD
+iterSolution :: Key -> Int -> Map (Int, Int) Int -> Maybe Int
+iterSolution (Key k) n soln = lookup m k
+  where m | n <= 0    = soln
+          | otherwise = (iterate solutionStep soln) !! n
 
-lookupD :: k -> MapD k v -> Thunk v
-lookupD k EmptyD                          = T
-lookupD k (BinD _ T      _ _)             = T
-lookupD k (BinD l (E k') v r) | k == k'   = v
-                              | k <= k'   = recur l
-                              | otherwise = recur r
-  where recur (E demand) = lookupD k demand
-        recur T          = T
+iterSolution_spec :: Evaluation '[Key, Int, KMap] (Maybe Int)
+                  -> Maybe (Int, Int)
+iterSolution_spec (Evaluation args demands dOut) =
+  let I (Key evalK) = hd args
+      I nIter       = hd (tl args)
+      dInM          = hd (tl (tl demands))
+      inM           = replaceThunk Empty (fromDemand @KMap dInM)
+  in  if (inM == Empty)   ||
+         isBaseCase evalK ||
+         nIter <= 0       ||
+         (isNothing $ lookup inM evalK)
+      then Nothing
+      else Just evalK
+  where isBaseCase (j, k) = j - 1 < 0 || k - weights !! j < 0
 \end{inlinecode}
 %
-Now, we can write an executable specification
-for \lk{solutionStep}. \hzh{TODO: write the spec with
-strictCheckWithResults, and show a counterexample}
-%
-\begin{inlinecode}
-\end{inlinecode}
-%
+This specification is different from \lk{rot\_spec} --- it uses
+the \lk{Evaluation} type instead of \lk{Spec}. In StrictCheck, we
+reverse the \lk{Spec} type for specifications that computes the exact
+demand on inputs. However, there many cases where we might want to
+only check whether some property holds of the observed demands on the
+inputs. For example, here we only need to check that the value
+at \lk{(j, k)} is not evaluated, and we don't compute the exact demand
+on the input map. For these specifications, we write a function that
+takes an \lk{Evaluation} value, which contains the inputs, the
+observed demand on the inputs, and a randomly generated demand on the
+output by the framework.
 
-\leo{Punned names for sections? Or is that just an urns thing? :P }
-
-\begin{itemize}
-\item In this section we will showcase our proposed specification language \leo{It's not a language tho}
-\item while introducing the running example of our paper: maps.
-\item Maps are particularly well-suited for a discussion of laziness because of the interesting different
-possible behaviors: strict-maps, value-lazy maps \leo{Point out Data.Map.Strict
-vs Data.Map}, and fully lazy maps
-\item For simplicity, we will use binary search trees as maps, assuming the keys are integers and forego balancing
-as the added complexity is irrelevant to the laziness discussion. \leo{Can we claim it wouldn't matter at all? I think so}
-\end{itemize}
+The specification then checks whether the expected property holds for
+this evaluation, and if the evaluation fails the expectation, it
+outputs an evidence of the failure. The evidence is then returned to
+the programmer by the framework for further investigation. In this
+case, the evidence is simply the \lk{(j, k)} pair at which the
+solution table was accessed.
 
 \section{Demand Types and Specification}
 \label{sec:demand-types-and-spec}
-\hzh{In this section, we should explain how demand types and specification work in general. We don't actually have to define a ListD/TreeD for every type out there. There is also a generic pattern for the type of a specification given the type of a function. We should also talk about the non-exact versions of specifications, and how they work}
-
 There is a general pattern between a type \lk{a} and
 its \textit{demand type}, for which we will write \lk{Demand a} from
 now on. In both the example on lists and the example on maps,
@@ -557,8 +563,8 @@ This design is motivated by the runtime representation of Haskell
 values. Boxed values in Haskell are indirectly represented by a
 pointer, and the pointer can lead to either a constructor bundled with
 pointers to deeper parts of the value, or a piece of unevaluated code,
-which will produce a fragment of the value upon execution. This piece
-of code is also know as a thunk.
+which will produce a fragment of the value upon execution
+~\cite{SPJSTG}. This piece of code is also know as a thunk.
 
 The \lk{Thunk} type reifies \hzh{there is a slight caveat here though,
 we don't really capture sharing with this representation} the runtime
@@ -566,8 +572,8 @@ representation into a Haskell value. Programmers can then inspect
 these demand values within Haskell. Most importantly, the demand types
 form a critical part of specifications on laziness.
 
-A \textit{specification} in StrictCheck is a function that computes
-demand values. When we talk about Haskell function's laziness
+An \textit{exact specification} in StrictCheck is a function that
+computes demand values. When we talk about Haskell function's laziness
 informally, we often refer to these functions as ``strict'' or
 ``lazy'' in its arguments. There is a lot of information we can unpack
 from such phrases --- how strict the function is in its arguments, the
@@ -590,18 +596,15 @@ meaning of this specification is very different from the other
 choice. A specification of this type predicts how the \lk{Int}
 argument is used given a demand on the partially-applied \lk{take}
 function, and this specification does not produce information on how
-the lists are used at all.
+the lists are used at all. StrictCheck specifications apply to
+higher-order functions as well. Consider \lk{map :: (a -> b) -> [a] ->
+[b]}, the type of its specification is \lk{Spec '[a -> b, [a]]
+[b]}. In order to test higher-order functions, StrictCheck needs to
+generate functions with interesting laziness behavior. This is
+discussed in more details in \Cref{sec:gen-lazy-fun}.
 
-StrictCheck specifications apply to higher-order functions, and are
-compositional. Take the example of \lk{map :: (a -> b) -> [a] -> [b]},
-the type of its specification is \lk{Spec '[a] b -> Spec '[[a]] [b]},
-a function from specifications to specifications. This allows
-programmers to apply the specification of \lk{map} to any
-specification of the function argument to \lk{map}, and conveniently
-synthesize a specification based on that of \lk{map}.
-
-The \lk{Spec} type also has a single constructor with the same
-name. This constructor takes a higher-order function in
+The \lk{Spec} type has a single constructor with the same name. This
+constructor takes a higher-order function in
 continuation-passing-style ~\cn, where the first argument to the
 function is a framework-supplied function that takes the predicted
 demand on the inputs. We will always name this argument \lk{predict}
@@ -617,6 +620,17 @@ definitions in \Cref{sec:examples}, our implementation handles this
 transition automatically through generic programming. We delay
 discussion of this implementation detail
 to \Cref{sec:generic-programming}.
+
+The \lk{Evaluation} type constructor has the same type-level index
+as \lk{Spec}. Its first argument is the type-level list of all
+argument types of the specified function, and the second argument is
+the type of the specified function's result. Specifications
+using \lk{Evaluation} must output values of type \lk{Maybe e},
+where \lk{e} is the type of the evidence. StrictCheck is polymorphic
+in this evidence type, so programmers can choose to output any useful
+information for debugging. These specifications are spiritually
+similar to properties in QuickCheck
+~\cite{Claessen:2000:QLT:357766.351266}.
 
 \section{Generating lazy functions}
 \label{sec:gen-lazy-fun}
