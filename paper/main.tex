@@ -207,13 +207,14 @@ Because LazyCheck was taken.
 Lazy evaluation gives tremendous power to functional programmers
 ~\cite{WhyFPMatters} and is actively used in various practical
 applications. For instance, the big-data framework Spark uses laziness
-to drive computations on demand\cn, Apple's programming language Swift
-leverages it to initialize expensive resources as needed\cn, and many
-functional reactive programming web frameworks rely on
-it crucially\cn \leo{This point might need more exposition about frp}. Haskell
-is the most popular programming language that allows programmers to
-enjoy the power of lazy evaluation by default. However, it
-does not come without a price.
+to drive computations on demand
+~\cite{Zaharia:2012:RDD:2228298.2228301}, Apple's programming language
+Swift leverages it to initialize expensive resources as needed
+~\cite{Swift}, and many functional reactive programming web frameworks
+rely on it crucially\cn \leo{This point might need more exposition
+about frp}. Haskell is the most popular programming language that
+allows programmers to enjoy the power of lazy evaluation by
+default. However, it does not come without a price.
 \leo{Didn't we have an FRP quote by someone that Laziness was the third source of
 bugs or something? Work that in?}
 \hzh{Ryan Trinkle (author of Reflex) said laziness was the 3rd most difficult thing to
@@ -274,7 +275,7 @@ evaluation occurs within a data structure
 %divergence/nontermination) yet since that seems like a rather
 %technical detail of the spec}
 \item We propose a framework for automated testing against such specifications.\caleb{Automated testing? Can be more specific}\leo{Should we mention QuickCheck here?}
-\item We improve upon the random function generators from QuickCheck\cn to generate functions with arbitrary laziness behaviors.
+\item We improve upon the random function generators from QuickCheck ~\cite{Claessen:2000:QLT:357766.351266} to generate functions with arbitrary laziness behaviors.
 \item We discuss our generic programming-based impementation to apply StrictCheck to all algebraic data types.\leo{I guess ``packed'' maps do not qualified as algebraic?}
 \end{itemize}
 %
@@ -607,13 +608,13 @@ discussed in more details in \Cref{sec:gen-lazy-fun}.
 
 The \lk{Spec} type has a single constructor with the same name. This
 constructor takes a higher-order function in
-continuation-passing-style ~\cn, where the first argument to the
-function is a framework-supplied function that takes the predicted
-demand on the inputs. We will always name this argument \lk{predict}
-in this paper. The function is CPS'd to hide some internal plumbing
-that presents a variadic interface to the user, so that the number of
-arguments to \lk{predict} always matches the length of the type-level
-list in \lk{Spec}.
+continuation-passing-style ~\cite{Reynolds:1993:DC:198112.198114},
+where the first argument to the function is a framework-supplied
+function that takes the predicted demand on the inputs. We will always
+name this argument \lk{predict} in this paper. The function is CPS'd
+to hide some internal plumbing that presents a variadic interface to
+the user, so that the number of arguments to \lk{predict} always
+matches the length of the type-level list in \lk{Spec}.
 
 The translation between a data type to its demand type and between a
 function type to its specification type are mechanic, and although we
