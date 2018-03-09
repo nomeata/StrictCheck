@@ -95,3 +95,26 @@
 \lstnewenvironment{inlinecode}{\lstset{language=Haskell,mathescape=false,basicstyle=\ttfamily\small}}{}
 % If you guys want to include verbatim code from files, we could do something like this
 %\newcommand{\qccode}[2]{\lstinputlisting[language=SSR,linerange={#2},basicstyle=\ttfamily\small]{\pubrepo/#1}}
+
+\newcommand{\X}[1]{$\texttt{X}_{\texttt{#1}}$}
+
+\newcommand{\rotex}[6]{
+\[
+\begin{array}{cccc}
+\text{Inputs} & \text{Result} & \text{Output Demand} & \text{Demand ~ On ~ Inputs} \\
+\begin{array}{l}
+  \lk{fs} : \lk{#1} \\
+  \lk{bs} : \lk{#2}
+\end{array} &
+  \lk{#3} &
+  \lk{#4} &
+\begin{array}{l}
+  \lk{fs} : \lk{#5} \\
+  \lk{bs} : \lk{#6}
+\end{array} 
+\end{array}
+\]
+
+}
+
+

@@ -327,31 +327,47 @@ in their laziness behavior. Fortunately, we can use StrictCheck to
 write a specification that makes this property of \lk{rotate}
 testable.
 
-To describe the laziness behavior, we need to first introduce a few
-types that describe how lists are used. We use the
-term \textit{demand} to refer to the shape of such usage. Concretely,
-a \textit{demand} is a shape that describes the used part of a data
-structure. For lists, \textit{demands} will be prefixes of lists. We
-use the type \lk{ListD} to represent such demands.
+To describe the laziness behavior, we need to first introduce a few of
+StrictCheck's types. First of all, we use a type \lk{Thunk} to capture
+whether a particular field is forced or not.
+%
+\begin{inlinecode}
+  data Thunk = E !a | T
+\end{inlinecode}
+%
+Similarly to a \lk{Maybe}, the \lk{Thunk} datatype has two
+constructors: a nullary one \lk{T} corresponding to thunks and a
+strict single-argument one \lk{E} corresponding to evaluated values.
+
+Secondly, StrictCheck introduces the notion of a \textit{demand}: a
+shape that describes the used part of a data structure. For
+lists, \textit{demands} will be prefixes of lists. We use the
+type \lk{ListD} to represent such list demands.
 %
 \begin{inlinecode}
   data ListD a = NilD
                | ConsD (Thunk a) (Thunk (ListD a))
 \end{inlinecode}
 %
-The \lk{Thunk} type used in \lk{ListD} has 2 constructors: \lk{E}
-for \textit{evaluated} and \lk{T}, a nullary constructor,
-for \textit{thunk}. In \lk{ListD}, \lk{Thunk} wraps around all the
-list constructor fields, and this allows us to represent lack of
-further evaluation by using the \lk{T} constructor. For example, given
-the list \lk{[1, 2, 3]}, the value \lk{ConsD T (ConsD T T)} represents
-the \textit{demand} that reveals the first 2 \lk{Cons} constructors of
-the list, but does not evaluate any other parts of the list. To
-improve readability of demand values, we will also use the
-syntax \lk{\_ : \_ : \_} instead of explicit demand type values. In
-this expression, the first two underscores represent unevaluated
-elements in the list, while the last underscore represents unevaluated
-tail of the list.
+In \lk{ListD}, \lk{Thunk} wraps around all the list constructor
+fields, and this allows us to represent lack of further evaluation by
+using the \lk{T} constructor.
+
+\leo{The following is slightly too dense. How can we take out some
+part of this as code?}
+For example, given the list \lk{[1, 2, 3]}, the value \lk{ConsD T
+(ConsD T T)} represents the \textit{demand} that reveals the first
+2 \lk{Cons} constructors of the list, but does not evaluate any other
+parts of the list. To improve readability of demand values, we will
+also use the syntax \lk{\_ : \_ : \_} instead of explicit demand type
+values. In this expression, the first two underscores represent
+unevaluated elements in the list, while the last underscore represents
+unevaluated tail of the list.
+%
+We also use metavariables \lk{\X{i}} to denote either a thunk or an
+evaluated field. For instance, \lk{\X1 : \X2 : \_} can denote the
+above 2-\lk{Cons} demand \lk{\_ : \_ : \_}, a similar demand where
+both cons cells are evaluated \lk{ 1 : 2 : \_}, or a mix of both.
 
 In Haskell, to trigger the evaluation of a lazy function, we need to
 exert some demand on the result of that function. This suggests a
@@ -363,13 +379,65 @@ as well. The \lk{take} function introduced in \Cref{sec:intro} is such
 a case.
 
 Putting these pieces together, we can specify the laziness behavior
-of \lk{rotate} with Okasaki's insight: as long as the front list is
-longer than the back list, demanding the first element from the result
-of \lk{rotate} only causes evaluation of the first element of the
-front list ~\cite{Okasaki95simpleand}. Since \lk{rotate} is always
-used by supplying the empty list \lk{[]} as the accumulator argument,
-we define \lk{rot fs bs = rotate fs bs []}, and show a specification
-of \lk{rot}.
+of \lk{rotate}. Since \lk{rotate} is always used by supplying the
+empty list \lk{[]} as the accumulator argument, we define \lk{rot fs
+bs = rotate fs bs []}, and show a specification of \lk{rot}.  Before
+giving the actual specification however, let's try to build up some
+intuition a series of example demands for the simpler, reverse and
+append version:
+%
+\begin{inlinecode}
+  rot_simple fs bs = fs ++ reverse bs
+\end{inlinecode}
+
+All of our example demands will be of the following form.
+%
+\rotex{[1,2,3]}{[6,5,4]}{[1,2,3,4,5,6]}
+      {\X1 : \X2 : \_}{\X1 : \X2 : \_}{\_}
+%
+The fist column shows the input lists \lk{fs} and \lk{bs}; here they
+are \lk{[1,2,3]} and \lk{[4,5,6]} respectively. The second column
+shows the result of \lk{rot\_simple fs bs} when fully evaluated;
+here \lk{[1,2,3,4,5,6]}. The third column shows the actual output
+demand exerted; just like we described above, the demand \lk{\X1 : \X2
+: \_} means that we only force the first two cons cells and, depending
+on whether the \lk{\X{i}} are thunks or not, we might also force the
+first two elements. The first and third column together are the actual
+inputs to our specification. The second column is there for the
+readers convenience.
+
+The last column is the demand on the inputs predicted by our
+specification.  In this first example, where the output demand is
+smaller than the input list, the demand on the first argument \lk{fs}
+is equal to the demand, while the demand on the second list \lk{bs} is
+the empty demand. Indeed, if concretely the output demand is \lk{ \_ :
+2 : \_} (which could for example be obtained by printing \lk{hd \$
+tl \$ rot\_simple [1,2,3] [6,5,4]}), then only the first
+two \lk{Cons}-cells of \lk{fs} will be forced, and of those only the
+second one will have its integer field evaluated.
+
+On the other hand, if the output demand is larger than the first list,
+then \textit{all} of the spine of second argument has to be evaluated.
+%
+\rotex{[1,2,3]}{[6,5,4]}{[1,2,3,4,5,6]}
+      {\X1 : \X2 : \X3 : \X4 : \_}{ [ \X1 , \X2 , \X3 ] } { [ \_ , \_ , \X4 ] }
+%
+The predicted demand on the first list will be the top part of the
+demand of length equal to \lk{length fs}. The predicted demand on the
+second list will be the reverse of the remaining demand, padded with
+thunks if necessary.
+\leo{One more tricky case, when the demand on the output forces
+the null constructor of the bs list. How do we talk about that?}
+
+Now we can give the actual StrictCheck specification
+of \lk{rot\_simple}:
+
+\leo{Debug the stupid spec and add it and describe it}
+
+We can now move on to the more complex \lk{rot} function from Okasaki:
+as long as the front list is longer than the back list, demanding the
+first element from the result of \lk{rotate} only causes evaluation of
+the first element of the front list ~\cite{Okasaki95simpleand}.
 %
 \begin{inlinecode}
 rot_spec :: Shaped a => Spec '[[a], [a]] [a]
