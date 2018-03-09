@@ -207,13 +207,14 @@ Because LazyCheck was taken.
 Lazy evaluation gives tremendous power to functional programmers
 ~\cite{WhyFPMatters} and is actively used in various practical
 applications. For instance, the big-data framework Spark uses laziness
-to drive computations on demand\cn, Apple's programming language Swift
-leverages it to initialize expensive resources as needed\cn, and many
-functional reactive programming web frameworks rely on
-it crucially\cn \leo{This point might need more exposition about frp}. Haskell
-is the most popular programming language that allows programmers to
-enjoy the power of lazy evaluation by default. However, it
-does not come without a price.
+to drive computations on demand
+~\cite{Zaharia:2012:RDD:2228298.2228301}, Apple's programming language
+Swift leverages it to initialize expensive resources as needed
+~\cite{Swift}, and many functional reactive programming web frameworks
+rely on it crucially\cn \leo{This point might need more exposition
+about frp}. Haskell is the most popular programming language that
+allows programmers to enjoy the power of lazy evaluation by
+default. However, it does not come without a price.
 \leo{Didn't we have an FRP quote by someone that Laziness was the third source of
 bugs or something? Work that in?}
 \hzh{Ryan Trinkle (author of Reflex) said laziness was the 3rd most difficult thing to
@@ -249,13 +250,14 @@ take_spec =
 \end{inlinecode}
 %
 The \lk{Spec} constructor takes a function, whose first
-argument \lk{predict} is the predicted demand on the \lk{Int} argument
-of \lk{take}, and second argument the predicted demand on the \lk{[a]}
-argument. This spec simply says that the \lk{Int} argument will always
-be used, and the demand on the list argument is either the same as the
-demand on the output, or demand on the output plus some
-unevaluated \lk{thunk} at the end. The former case happens when $n$ is
-larger than the list's length, otherwise the latter case applies.
+argument \lk{predict} is is a continuation that takes the predicted
+demands on the inputs to \lk{take}, and second argument of the
+function is the observed demand on the output \lk{[a]}. This spec says
+that the \lk{Int} argument will always be used, and the demand on the
+list argument is either the same as the demand on the output, or
+demand on the output plus some unevaluated \lk{thunk} at the end. The
+former case happens when $n$ is larger than the list's length,
+otherwise the latter case applies.
 
 In the next section we work through two more examples, functional
 queues and functional maps, demonstrating both the difficulties of
@@ -274,7 +276,7 @@ evaluation occurs within a data structure
 %divergence/nontermination) yet since that seems like a rather
 %technical detail of the spec}
 \item We propose a framework for automated testing against such specifications.\caleb{Automated testing? Can be more specific}\leo{Should we mention QuickCheck here?}
-\item We improve upon the random function generators from QuickCheck\cn to generate functions with arbitrary laziness behaviors.
+\item We improve upon the random function generators from QuickCheck ~\cite{Claessen:2000:QLT:357766.351266} to generate functions with arbitrary laziness behaviors.
 \item We discuss our generic programming-based impementation to apply StrictCheck to all algebraic data types.\leo{I guess ``packed'' maps do not qualified as algebraic?}
 \end{itemize}
 %
@@ -318,7 +320,7 @@ the naive reverse-and-append operation, \lk{rotate} is much
 lazier. A \lk{reverse} function has to evaluate the entire structure
 of the back list, which is not incremental. On the other
 hand, \lk{rotate} produces a list immediately, and packs the rest of
-the computation into the lazy list \lk{rest}.
+the computation into the tail of the lazy list.
 
 Since \lk{rotate} is functionally equivalent to \lk{front ++ (reverse
 back)}, a programmer could have implemented it naively and never
@@ -458,7 +460,7 @@ rot_spec =
          (spinePad ++ reverse bs' ++ if overflow || overrot then [] else thunk)
 \end{inlinecode}
 %
-The \lk{rotate\_spec} exactly captures the core idea from Okasaki's \lk{rotate}
+The \lk{rot\_spec} exactly captures the core idea from Okasaki's \lk{rotate}
 operation, and testing the reverse and append implementation against this
 specification immediately produces a counter example.
 \begin{figure}[H]
@@ -487,11 +489,13 @@ terms to observe a difference in termination.
 \leo{Here we need a similar discussion as with lists}
 
 
-Moreover, it is important to be able to distinguish whether such a datatype
-follows a desired laziness behavior. For instance, the standard functional
-solution for dynamic programming problems crucially uses laziness \hzh{is this
-solution really standard? Is there some work we can cite to establish this
-approach as the canonical approach for dynamic programming in functional
+Moreover, it is important to be able to distinguish whether such a
+datatype follows a desired laziness behavior. \hzh{the previous
+sentence and the next one feels disconnected} For instance, the
+standard functional solution for dynamic programming problems
+crucially uses laziness \hzh{is this solution really standard? Is
+there some work we can cite to establish this approach as the
+canonical approach for dynamic programming in functional
 programming?}. Let us consider the famous knapsack problem.
 %
 The inputs of the problem are two sequences of numbers $w_i$ and $v_i$
@@ -551,14 +555,15 @@ expression. The \lk{if} expression contains value-level recursion to
 \lk{solution} itself, and this would manifest as an infinite loop
 at runtime. This is an incredibly subtle bug related to laziness.
 
-To catch this behavior through testing, we can write another specification that
-captures this correctness condition. The well-foundedness \hzh{is this a word?}
-of \lk{solution} depends on what is evaluated when the value at key \lk{(j, k)}
-of the map is demanded. Let $\lk{solutionStep}_n$ be the $n$-times iterated
-step function \lk{solutionStep . solutionStep . ... . solutionStep}, then if we
-demand the value at \lk{(j, k)} from the result of $\lk{solutionStep}_n$, its
-input map should not be evaluated at the \lk{(j, k)} entry since otherwise
-evaluating the value at \lk{(j, k)} becomes an infinite loop at the fixpoint.
+To catch this behavior through testing, we can write another
+specification that captures this correctness condition. Termination
+of \lk{solution} depends on what is evaluated when the value at
+key \lk{(j, k)} of the map is demanded. Let $\lk{solutionStep}_n$ be
+the $n$-times iterated step function \lk{solutionStep . solutionStep
+. ... . solutionStep}, then if we demand the value at \lk{(j, k)} from
+the result of $\lk{solutionStep}_n$, its input map should not be
+evaluated at the \lk{(j, k)} entry since otherwise evaluating the
+value at \lk{(j, k)} becomes an infinite loop at the fixpoint.
 
 We can write another executable specification for this property of
 $\lk{solutionStep}_n$. To describe the concrete \textit{demand} on
@@ -595,15 +600,14 @@ iterSolution_spec (Evaluation args demands dOut) =
 %
 This specification is different from \lk{rot\_spec} --- it uses
 the \lk{Evaluation} type instead of \lk{Spec}. In StrictCheck, we
-reverse the \lk{Spec} type for specifications that computes the exact
+reserve the \lk{Spec} type for specifications that computes the exact
 demand on inputs. However, there many cases where we might want to
 only check whether some property holds of the observed demands on the
 inputs. For example, here we only need to check that the value
 at \lk{(j, k)} is not evaluated, and we don't compute the exact demand
 on the input map. For these specifications, we write a function that
-takes an \lk{Evaluation} value, which contains the inputs, the
-observed demand on the inputs, and a randomly generated demand on the
-output by the framework.
+takes an \lk{Evaluation} value, which contains all participants
+necessary for analyzing laziness properties of \lk{iterSolution}.
 
 The specification then checks whether the expected property holds for
 this evaluation, and if the evaluation fails the expectation, it
@@ -675,13 +679,13 @@ discussed in more details in \Cref{sec:gen-lazy-fun}.
 
 The \lk{Spec} type has a single constructor with the same name. This
 constructor takes a higher-order function in
-continuation-passing-style ~\cn, where the first argument to the
-function is a framework-supplied function that takes the predicted
-demand on the inputs. We will always name this argument \lk{predict}
-in this paper. The function is CPS'd to hide some internal plumbing
-that presents a variadic interface to the user, so that the number of
-arguments to \lk{predict} always matches the length of the type-level
-list in \lk{Spec}.
+continuation-passing-style ~\cite{Reynolds:1993:DC:198112.198114},
+where the first argument to the function is a framework-supplied
+function that takes the predicted demand on the inputs. We will always
+name this argument \lk{predict} in this paper. The function is CPS'd
+to hide some internal plumbing that presents a variadic interface to
+the user, so that the number of arguments to \lk{predict} always
+matches the length of the type-level list in \lk{Spec}.
 
 The translation between a data type to its demand type and between a
 function type to its specification type are mechanic, and although we
