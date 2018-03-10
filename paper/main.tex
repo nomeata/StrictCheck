@@ -428,13 +428,46 @@ The predicted demand on the first list will be the top part of the
 demand of length equal to \lk{length fs}. The predicted demand on the
 second list will be the reverse of the remaining demand, padded with
 thunks if necessary.
-\leo{One more tricky case, when the demand on the output forces
-the null constructor of the bs list. How do we talk about that?}
 
-Now we can give the actual StrictCheck specification
-of \lk{rot\_simple}:
+The two cases above give rise to the following StrictCheck specification:
+%
+\begin{inlinecode}
+rot_simple_spec :: (Show a, Shaped a) => Spec '[[a], [a]] [a]
+rot_simple_spec =
+  Spec $ \predict d fs bs ->
+    let demandOnFs
+          | length (cap d) > length fs =
+              take (length fs) d
+          | otherwise = d
+        demandOnBs
+          | length (cap d) > length fs =
+              reverse $ take (length bs)
+                      $ (drop (length fs) (cap d)) ++ repeat thunk
+          | otherwise = thunk
+    in predict demandOnFs demandOnBs
+\end{inlinecode}
+%
+Just like the \lk{take\_spec} of the introduction, this specification
+is the constructor \lk{Spec} applied to a function that takes a
+function \lk{predict}, the output demand \lk{d}, as well as the actual
+input lists \lk{fs} and \lk{bs} and \lk{predict}s the demand
+on \lk{fs} and \lk{bs}. In particular, if we don't demand more from
+the output of \lk{rot\_simple} than the length of \lk{fs} then the
+demand on \lk{fs} is just \lk{d} itself, while \lk{bs} is left
+completely unevaluated. On the other hand, if we do, only the first
+half of the demand is actually relevant to \lk{fs}, while the rest
+constitutes the demand on \lk{bs} after being appropriately padded
+with thunks if necessary and reversed.
 
-\leo{Debug the stupid spec and add it and describe it}
+Let's test this specification!
+%
+\leo{Screengrab bug? How did you do the other one?}
+%
+StrictCheck quickly reveals a bug: when the output demand is
+spinestrict and the back list \lk{bs} is empty, then the second list
+will also be forced to ensure it is of the correct shape
+(\lk{[]}). \leo{TODO: corrected spec. Thinking side-by-side figure
+with the next one?}
 
 We can now move on to the more complex \lk{rot} function from Okasaki:
 as long as the front list is longer than the back list, demanding the
