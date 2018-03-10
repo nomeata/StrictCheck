@@ -334,7 +334,7 @@ StrictCheck's types. First of all, we use a type \lk{Thunk} to capture
 whether a particular field is forced or not.
 %
 \begin{inlinecode}
-  data Thunk = E !a | T
+  data Thunk a = E !a | T
 \end{inlinecode}
 %
 Similarly to a \lk{Maybe}, the \lk{Thunk} datatype has two
